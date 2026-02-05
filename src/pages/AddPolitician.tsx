@@ -11,7 +11,6 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { ArrowLeft, UserPlus, Loader2 } from 'lucide-react'
-import { useCreatePolitician } from '@/hooks/usePoliticians'
 import { supabase } from '@/integrations/supabase/client'
 import { toast } from 'sonner'
 
@@ -22,14 +21,13 @@ const ESTADOS_BR = [
 ]
 
 const PARTIDOS = [
-  'MDB', 'PT', 'PSDB', 'PP', 'PDT', 'PTB', 'DEM', 'PL', 'PSB',
-  'REPUBLICANOS', 'PSC', 'PCdoB', 'PSD', 'CIDADANIA', 'PV',
-  'AVANTE', 'PATRIOTA', 'PODEMOS', 'NOVO', 'REDE', 'PSOL', 'UNIÃO'
+  'AVANTE', 'CIDADANIA', 'MDB', 'NOVO', 'PCdoB', 'PDT', 'PL',
+  'PODEMOS', 'PP', 'PSB', 'PSD', 'PSDB', 'PSOL', 'PT', 'PV',
+  'REDE', 'REPUBLICANOS', 'UNIÃO'
 ]
 
 export default function AddPolitician() {
   const navigate = useNavigate()
-  const createPolitician = useCreatePolitician()
 
   const [formData, setFormData] = useState({
     name: '',
@@ -51,7 +49,7 @@ export default function AddPolitician() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!formData.name) {
+    if (!formData.name.trim()) {
       toast.error('Nome é obrigatório')
       return
     }
@@ -59,36 +57,32 @@ export default function AddPolitician() {
     setIsSubmitting(true)
 
     try {
-      // Pega o usuário atual (ou cria um temporário para demo)
-      const { data: { user } } = await supabase.auth.getUser()
+      const { error } = await supabase
+        .from('politicians')
+        .insert({
+          user_id: '00000000-0000-0000-0000-000000000000',
+          name: formData.name.trim(),
+          nickname: formData.nickname.trim() || null,
+          party: formData.party || null,
+          position: formData.position.trim() || null,
+          state: formData.state || null,
+          city: formData.city.trim() || null,
+          whatsapp: formData.whatsapp.trim() || null,
+          email: formData.email.trim() || null,
+          is_active: true,
+          notify_whatsapp: true,
+          notify_email: true
+        })
 
-      if (!user) {
-        // Para demo, vamos criar sem user_id por enquanto
-        // Em produção, redirecionar para login
-        toast.error('Você precisa estar logado para cadastrar políticos')
-        return
-      }
+      if (error) throw error
 
-      await createPolitician.mutateAsync({
-        user_id: user.id,
-        name: formData.name,
-        nickname: formData.nickname || null,
-        party: formData.party || null,
-        position: formData.position || null,
-        state: formData.state || null,
-        city: formData.city || null,
-        whatsapp: formData.whatsapp || null,
-        email: formData.email || null,
-        is_active: true,
-        notify_whatsapp: true,
-        notify_email: true
+      toast.success('Político cadastrado!', {
+        description: `${formData.name} adicionado ao monitoramento`
       })
-
-      toast.success('Político cadastrado com sucesso!')
       navigate('/dashboard')
-    } catch (error) {
-      console.error('Erro ao cadastrar:', error)
-      toast.error('Erro ao cadastrar político')
+    } catch (error: any) {
+      console.error('Erro:', error)
+      toast.error('Erro ao cadastrar', { description: error.message })
     } finally {
       setIsSubmitting(false)
     }
@@ -97,13 +91,9 @@ export default function AddPolitician() {
   return (
     <div className="min-h-screen bg-background p-4">
       <div className="container max-w-2xl mx-auto">
-        <Button
-          variant="ghost"
-          onClick={() => navigate('/dashboard')}
-          className="mb-6"
-        >
+        <Button variant="ghost" onClick={() => navigate('/dashboard')} className="mb-6">
           <ArrowLeft className="h-4 w-4 mr-2" />
-          Voltar ao Dashboard
+          Voltar
         </Button>
 
         <Card>
@@ -113,13 +103,12 @@ export default function AddPolitician() {
               Cadastrar Político
             </CardTitle>
             <CardDescription>
-              Adicione um político para iniciar o monitoramento de mídia
+              Adicione um político para monitorar notícias e menções automaticamente
             </CardDescription>
           </CardHeader>
 
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Dados básicos */}
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="name">Nome Completo *</Label>
@@ -140,34 +129,22 @@ export default function AddPolitician() {
                     value={formData.nickname}
                     onChange={(e) => handleChange('nickname', e.target.value)}
                   />
-                  <p className="text-xs text-muted-foreground">
-                    Como é conhecido na mídia
-                  </p>
                 </div>
               </div>
 
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="party">Partido</Label>
-                  <Select
-                    value={formData.party}
-                    onValueChange={(value) => handleChange('party', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o partido" />
-                    </SelectTrigger>
+                  <Label>Partido</Label>
+                  <Select value={formData.party} onValueChange={(v) => handleChange('party', v)}>
+                    <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                     <SelectContent>
-                      {PARTIDOS.map(partido => (
-                        <SelectItem key={partido} value={partido}>
-                          {partido}
-                        </SelectItem>
-                      ))}
+                      {PARTIDOS.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="position">Cargo Atual</Label>
+                  <Label htmlFor="position">Cargo</Label>
                   <Input
                     id="position"
                     placeholder="Ex: Deputado Federal"
@@ -179,20 +156,11 @@ export default function AddPolitician() {
 
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="state">Estado</Label>
-                  <Select
-                    value={formData.state}
-                    onValueChange={(value) => handleChange('state', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o estado" />
-                    </SelectTrigger>
+                  <Label>Estado</Label>
+                  <Select value={formData.state} onValueChange={(v) => handleChange('state', v)}>
+                    <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                     <SelectContent>
-                      {ESTADOS_BR.map(estado => (
-                        <SelectItem key={estado} value={estado}>
-                          {estado}
-                        </SelectItem>
-                      ))}
+                      {ESTADOS_BR.map(e => <SelectItem key={e} value={e}>{e}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
@@ -208,21 +176,17 @@ export default function AddPolitician() {
                 </div>
               </div>
 
-              {/* Contatos para notificação */}
               <div className="border-t pt-6">
-                <h3 className="font-medium mb-4">Contatos para Notificação</h3>
+                <h3 className="font-medium mb-4">Contatos (opcional)</h3>
                 <div className="grid md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="whatsapp">WhatsApp</Label>
                     <Input
                       id="whatsapp"
-                      placeholder="Ex: 11999999999"
+                      placeholder="11999999999"
                       value={formData.whatsapp}
                       onChange={(e) => handleChange('whatsapp', e.target.value)}
                     />
-                    <p className="text-xs text-muted-foreground">
-                      Para envio de relatórios diários
-                    </p>
                   </div>
 
                   <div className="space-y-2">
@@ -230,7 +194,7 @@ export default function AddPolitician() {
                     <Input
                       id="email"
                       type="email"
-                      placeholder="Ex: contato@exemplo.com"
+                      placeholder="contato@exemplo.com"
                       value={formData.email}
                       onChange={(e) => handleChange('email', e.target.value)}
                     />
@@ -238,26 +202,15 @@ export default function AddPolitician() {
                 </div>
               </div>
 
-              {/* Submit */}
               <div className="flex justify-end gap-4 pt-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => navigate('/dashboard')}
-                >
+                <Button type="button" variant="outline" onClick={() => navigate('/dashboard')}>
                   Cancelar
                 </Button>
                 <Button type="submit" disabled={isSubmitting}>
                   {isSubmitting ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Salvando...
-                    </>
+                    <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Salvando...</>
                   ) : (
-                    <>
-                      <UserPlus className="h-4 w-4 mr-2" />
-                      Cadastrar Político
-                    </>
+                    <><UserPlus className="h-4 w-4 mr-2" />Cadastrar</>
                   )}
                 </Button>
               </div>
