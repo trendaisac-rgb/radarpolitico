@@ -6,6 +6,7 @@
 import { supabase, type Politician, type Mention, type MentionInsert, type SentimentType } from '@/integrations/supabase/client'
 import { searchPoliticianNews, type NewsArticle } from './googleNews'
 import { analyzeArticleSimple, type AnalyzedArticle } from './analyzer'
+import { searchPoliticianYouTube, analyzeYouTubeVideo, type YouTubeVideo } from './youtube'
 
 export interface MonitoringResult {
   politicianId: number
@@ -16,6 +17,9 @@ export interface MonitoringResult {
   negative: number
   neutral: number
   mentions: AnalyzedArticle[]
+  // YouTube
+  youtubeVideos: number
+  youtubeNewVideos: number
 }
 
 /**
@@ -33,7 +37,39 @@ export async function monitorPolitician(politician: Politician): Promise<Monitor
 
   console.log(`📰 ${articles.length} notícias encontradas`)
 
-  if (articles.length === 0) {
+  // 2. Busca vídeos no YouTube
+  const youtubeVideos = await searchPoliticianYouTube(
+    politician.name,
+    politician.nickname || undefined,
+    politician.party || undefined
+  )
+
+  console.log(`🎬 ${youtubeVideos.length} vídeos do YouTube encontrados`)
+
+  // Processa vídeos do YouTube como menções
+  const youtubeArticles = youtubeVideos.map(video => {
+    const analysis = analyzeYouTubeVideo(video, politician.name)
+    return {
+      title: video.title,
+      link: video.url,
+      source: `YouTube - ${video.channelTitle}`,
+      pubDate: video.publishedAt,
+      description: video.description,
+      summary: `${video.title} - ${video.channelTitle}`,
+      sentiment: analysis.sentiment,
+      sentimentScore: analysis.sentimentScore,
+      relevanceScore: analysis.relevanceScore,
+      topics: ['youtube', 'video'],
+      contentHash: `yt_${video.id}`
+    } as AnalyzedArticle
+  })
+
+  // Combina notícias + YouTube
+  const allArticles = [...articles.map(article =>
+    analyzeArticleSimple(article, politician.name)
+  ), ...youtubeArticles]
+
+  if (allArticles.length === 0) {
     return {
       politicianId: politician.id,
       politicianName: politician.name,
@@ -42,22 +78,23 @@ export async function monitorPolitician(politician: Politician): Promise<Monitor
       positive: 0,
       negative: 0,
       neutral: 0,
-      mentions: []
+      mentions: [],
+      youtubeVideos: 0,
+      youtubeNewVideos: 0
     }
   }
 
-  // 2. Analisa cada artigo
-  const analyzedArticles = articles.map(article =>
-    analyzeArticleSimple(article, politician.name)
-  )
-
   // 3. Filtra duplicatas (já existentes no banco)
   const existingHashes = await getExistingHashes(politician.id)
-  const newArticles = analyzedArticles.filter(
+  const newArticles = allArticles.filter(
     article => !existingHashes.has(article.contentHash)
   )
 
-  console.log(`✨ ${newArticles.length} novas menções (${analyzedArticles.length - newArticles.length} duplicatas)`)
+  // Separa YouTube das notícias para estatísticas
+  const newYouTube = newArticles.filter(a => a.contentHash.startsWith('yt_'))
+  const newNews = newArticles.filter(a => !a.contentHash.startsWith('yt_'))
+
+  console.log(`✨ ${newNews.length} novas notícias + ${newYouTube.length} novos vídeos`)
 
   // 4. Salva no banco de dados
   if (newArticles.length > 0) {
@@ -74,10 +111,12 @@ export async function monitorPolitician(politician: Politician): Promise<Monitor
   return {
     politicianId: politician.id,
     politicianName: politician.name,
-    totalFound: articles.length,
+    totalFound: articles.length + youtubeVideos.length,
     newMentions: newArticles.length,
     ...stats,
-    mentions: newArticles
+    mentions: newArticles,
+    youtubeVideos: youtubeVideos.length,
+    youtubeNewVideos: newYouTube.length
   }
 }
 
