@@ -3,7 +3,7 @@
  * Formulário para adicionar político ao monitoramento
  */
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -28,6 +28,20 @@ const PARTIDOS = [
 
 export default function AddPolitician() {
   const navigate = useNavigate()
+  const [userId, setUserId] = useState<string | null>(null)
+
+  // Verifica autenticação e pega user_id
+  useEffect(() => {
+    const getUser = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        navigate('/login')
+        return
+      }
+      setUserId(session.user.id)
+    }
+    getUser()
+  }, [navigate])
 
   const [formData, setFormData] = useState({
     name: '',
@@ -57,8 +71,14 @@ export default function AddPolitician() {
     setIsSubmitting(true)
 
     try {
+      if (!userId) {
+        toast.error('Você precisa estar logado')
+        navigate('/login')
+        return
+      }
+
       const newPolitician: PoliticianInsert = {
-        user_id: '00000000-0000-0000-0000-000000000000',
+        user_id: userId,
         name: formData.name.trim(),
         nickname: formData.nickname.trim() || null,
         party: formData.party || null,
