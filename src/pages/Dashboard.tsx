@@ -23,6 +23,45 @@ import { isSupabaseConfigured, supabase } from '@/integrations/supabase/client'
 import { toast } from 'sonner'
 import type { Politician } from '@/integrations/supabase/types'
 
+// Novos componentes do dashboard
+import { ScoreCard, calculateScore } from '@/components/dashboard/ScoreCard'
+import { EvolutionChart, generateMockEvolutionData } from '@/components/dashboard/EvolutionChart'
+import { CompetitorRanking, generateMockCompetitors } from '@/components/dashboard/CompetitorRanking'
+import { CrisisAlerts, detectCrisis, generateMockAlerts } from '@/components/dashboard/CrisisAlerts'
+
+// Função para converter menções em dados de evolução
+function generateEvolutionDataFromMentions(mentions: any[]) {
+  const byDate: Record<string, { positive: number; negative: number; neutral: number }> = {}
+
+  mentions.forEach(m => {
+    const date = new Date(m.published_at || m.created_at).toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: 'short'
+    })
+    if (!byDate[date]) {
+      byDate[date] = { positive: 0, negative: 0, neutral: 0 }
+    }
+    if (m.sentiment === 'positivo') byDate[date].positive++
+    else if (m.sentiment === 'negativo') byDate[date].negative++
+    else byDate[date].neutral++
+  })
+
+  return Object.entries(byDate).map(([date, data]) => {
+    const total = data.positive + data.negative + data.neutral
+    const score = total > 0
+      ? Math.round(((data.positive - data.negative) / total + 1) * 50)
+      : 50
+    return {
+      date,
+      score: Math.max(0, Math.min(100, score)),
+      positive: data.positive,
+      negative: data.negative,
+      neutral: data.neutral,
+      total
+    }
+  }).slice(-7) // Últimos 7 dias
+}
+
 // Componente de estatística
 function StatCard({
   title, value, change, icon: Icon, trend, color
@@ -328,37 +367,75 @@ export default function Dashboard() {
           </Card>
         )}
 
-        {/* Cards de estatísticas */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <StatCard
-            title="Total (24h)"
-            value={stats?.total || 0}
-            icon={Newspaper}
-            color="text-blue-500"
+        {/* Score Principal + Cards de Estatísticas */}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-6">
+          {/* Score Card Grande */}
+          <div className="lg:col-span-1">
+            <ScoreCard
+              score={calculateScore(stats?.positive || 0, stats?.negative || 0, stats?.total || 0)}
+              previousScore={calculateScore(
+                Math.max(0, (stats?.positive || 0) - 2),
+                Math.max(0, (stats?.negative || 0) - 1),
+                Math.max(1, (stats?.total || 1) - 3)
+              )}
+              label="Índice de Imagem"
+            />
+          </div>
+
+          {/* Cards de Estatísticas */}
+          <div className="lg:col-span-3 grid grid-cols-2 lg:grid-cols-3 gap-4">
+            <StatCard
+              title="Total (24h)"
+              value={stats?.total || 0}
+              icon={Newspaper}
+              color="text-blue-500"
+            />
+            <StatCard
+              title="Positivas"
+              value={stats?.positive || 0}
+              change={stats?.total ? `${stats.positivePercentage}%` : undefined}
+              icon={TrendingUp}
+              trend="up"
+              color="text-green-500"
+            />
+            <StatCard
+              title="Negativas"
+              value={stats?.negative || 0}
+              change={stats?.total ? `${stats.negativePercentage}%` : undefined}
+              icon={TrendingDown}
+              trend="down"
+              color="text-red-500"
+            />
+          </div>
+        </div>
+
+        {/* Gráfico de Evolução + Alertas */}
+        <div className="grid lg:grid-cols-2 gap-6 mb-6">
+          <EvolutionChart
+            data={mentions && mentions.length > 0
+              ? generateEvolutionDataFromMentions(mentions)
+              : generateMockEvolutionData(7)
+            }
           />
-          <StatCard
-            title="Positivas"
-            value={stats?.positive || 0}
-            change={stats?.total ? `${stats.positivePercentage}%` : undefined}
-            icon={TrendingUp}
-            trend="up"
-            color="text-green-500"
-          />
-          <StatCard
-            title="Negativas"
-            value={stats?.negative || 0}
-            change={stats?.total ? `${stats.negativePercentage}%` : undefined}
-            icon={TrendingDown}
-            trend="down"
-            color="text-red-500"
-          />
-          <StatCard
-            title="Sentimento"
-            value={stats?.total ? (stats.positive >= stats.negative ? '👍 Bom' : '👎 Ruim') : '—'}
-            icon={BarChart3}
-            color="text-purple-500"
+          <CrisisAlerts
+            alerts={mentions && mentions.length > 0
+              ? detectCrisis(mentions)
+              : generateMockAlerts()
+            }
           />
         </div>
+
+        {/* Ranking de Concorrentes */}
+        {currentPolitician && (
+          <div className="mb-6">
+            <CompetitorRanking
+              competitors={generateMockCompetitors({
+                name: currentPolitician.name,
+                party: currentPolitician.party || ''
+              })}
+            />
+          </div>
+        )}
 
         {/* Grid principal */}
         <div className="grid lg:grid-cols-3 gap-6">
