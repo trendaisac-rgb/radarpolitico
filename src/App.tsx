@@ -31,3 +31,4 @@ const App = () => (
 );
 
 export default App;
+// Trigger Lovable sync - Fri Feb  6 00:25:15 UTC 2026
