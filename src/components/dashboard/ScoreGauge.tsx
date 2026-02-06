@@ -1,155 +1,184 @@
 /**
- * RadarPolítico - Score Gauge
- * Velocímetro visual para mostrar o score de imagem
+ * RadarPolítico - Score Gauge Profissional
+ * Indicador visual de score com design clean e corrigido
  */
-
-import { Card, CardContent } from '@/components/ui/card'
-import { TrendingUp, TrendingDown, Minus } from 'lucide-react'
 
 interface ScoreGaugeProps {
   score: number
   previousScore?: number
+  size?: number
+  label?: string
 }
 
-export function ScoreGauge({ score, previousScore }: ScoreGaugeProps) {
+export function ScoreGauge({ score, previousScore, size = 180, label = 'Score de Imagem' }: ScoreGaugeProps) {
+  // Garante que o score está entre 0 e 100
+  const normalizedScore = Math.max(0, Math.min(100, score))
   const diff = previousScore !== undefined ? score - previousScore : 0
-  const trend = diff > 2 ? 'up' : diff < -2 ? 'down' : 'stable'
 
-  // Calcula a rotação do ponteiro (0-100 -> -90deg a 90deg)
-  const rotation = ((score / 100) * 180) - 90
-
-  // Cores baseadas no score
-  const getScoreColor = (s: number) => {
-    if (s >= 70) return { color: '#22c55e', label: 'Excelente', bg: 'from-green-500/20' }
-    if (s >= 50) return { color: '#eab308', label: 'Bom', bg: 'from-yellow-500/20' }
-    if (s >= 30) return { color: '#f97316', label: 'Atenção', bg: 'from-orange-500/20' }
-    return { color: '#ef4444', label: 'Crítico', bg: 'from-red-500/20' }
+  // Calcula a cor e status baseado no score
+  const getScoreInfo = (s: number) => {
+    if (s >= 70) return { color: '#22c55e', label: 'Excelente', bgLight: '#dcfce7' }
+    if (s >= 50) return { color: '#eab308', label: 'Bom', bgLight: '#fef9c3' }
+    if (s >= 30) return { color: '#f97316', label: 'Atenção', bgLight: '#ffedd5' }
+    return { color: '#ef4444', label: 'Crítico', bgLight: '#fee2e2' }
   }
 
-  const scoreInfo = getScoreColor(score)
+  const info = getScoreInfo(normalizedScore)
+
+  // Configurações do arco
+  const strokeWidth = 14
+  const padding = 20
+  const radius = (size - strokeWidth - padding) / 2
+  const centerX = size / 2
+  const centerY = size / 2 + 10
+
+  // O arco vai de 180° a 0° (semicírculo superior)
+  const startAngle = 180
+  const endAngle = 0
+  const angleRange = startAngle - endAngle // 180 graus
+
+  // Calcula o ângulo do ponteiro baseado no score
+  const pointerAngle = startAngle - (normalizedScore / 100) * angleRange
+  const pointerAngleRad = (pointerAngle * Math.PI) / 180
+  const pointerLength = radius - 10
+  const pointerX = centerX + pointerLength * Math.cos(pointerAngleRad)
+  const pointerY = centerY + pointerLength * Math.sin(pointerAngleRad)
+
+  // Função para criar o path do arco
+  const createArc = (startDeg: number, endDeg: number) => {
+    const startRad = (startDeg * Math.PI) / 180
+    const endRad = (endDeg * Math.PI) / 180
+
+    const x1 = centerX + radius * Math.cos(startRad)
+    const y1 = centerY + radius * Math.sin(startRad)
+    const x2 = centerX + radius * Math.cos(endRad)
+    const y2 = centerY + radius * Math.sin(endRad)
+
+    const largeArc = Math.abs(endDeg - startDeg) > 180 ? 1 : 0
+    const sweep = endDeg < startDeg ? 0 : 1
+
+    return `M ${x1} ${y1} A ${radius} ${radius} 0 ${largeArc} ${sweep} ${x2} ${y2}`
+  }
+
+  // Calcula o ângulo de progresso
+  const progressAngle = startAngle - (normalizedScore / 100) * angleRange
 
   return (
-    <Card className={`bg-gradient-to-br ${scoreInfo.bg} to-transparent border-none shadow-lg`}>
-      <CardContent className="pt-6 pb-4">
-        <div className="text-center mb-4">
-          <span className="text-sm font-medium text-muted-foreground">Score de Imagem</span>
-        </div>
+    <div className="flex flex-col items-center">
+      <p className="text-sm font-medium text-muted-foreground mb-3">{label}</p>
 
-        {/* Gauge SVG */}
-        <div className="relative w-full max-w-[200px] mx-auto">
-          <svg viewBox="0 0 200 120" className="w-full">
-            {/* Background arc */}
-            <path
-              d="M 20 100 A 80 80 0 0 1 180 100"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="12"
-              strokeLinecap="round"
-              className="text-muted/20"
-            />
+      <div className="relative" style={{ width: size, height: size / 2 + 30 }}>
+        <svg
+          width={size}
+          height={size / 2 + 30}
+          viewBox={`0 0 ${size} ${size / 2 + 30}`}
+        >
+          {/* Gradiente */}
+          <defs>
+            <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="#ef4444" />
+              <stop offset="30%" stopColor="#f97316" />
+              <stop offset="50%" stopColor="#eab308" />
+              <stop offset="75%" stopColor="#84cc16" />
+              <stop offset="100%" stopColor="#22c55e" />
+            </linearGradient>
+          </defs>
 
-            {/* Colored segments */}
-            <path
-              d="M 20 100 A 80 80 0 0 1 56 40"
-              fill="none"
-              stroke="#ef4444"
-              strokeWidth="12"
-              strokeLinecap="round"
-              opacity="0.3"
-            />
-            <path
-              d="M 56 40 A 80 80 0 0 1 100 20"
-              fill="none"
-              stroke="#f97316"
-              strokeWidth="12"
-              strokeLinecap="round"
-              opacity="0.3"
-            />
-            <path
-              d="M 100 20 A 80 80 0 0 1 144 40"
-              fill="none"
-              stroke="#eab308"
-              strokeWidth="12"
-              strokeLinecap="round"
-              opacity="0.3"
-            />
-            <path
-              d="M 144 40 A 80 80 0 0 1 180 100"
-              fill="none"
-              stroke="#22c55e"
-              strokeWidth="12"
-              strokeLinecap="round"
-              opacity="0.3"
-            />
+          {/* Arco de fundo */}
+          <path
+            d={createArc(180, 0)}
+            fill="none"
+            stroke="#e5e7eb"
+            strokeWidth={strokeWidth}
+            strokeLinecap="round"
+          />
 
-            {/* Active arc based on score */}
-            <path
-              d="M 20 100 A 80 80 0 0 1 180 100"
-              fill="none"
-              stroke={scoreInfo.color}
-              strokeWidth="12"
-              strokeLinecap="round"
-              strokeDasharray={`${(score / 100) * 251.2} 251.2`}
-              className="transition-all duration-1000"
-            />
+          {/* Arco de progresso */}
+          <path
+            d={createArc(180, progressAngle)}
+            fill="none"
+            stroke="url(#gaugeGradient)"
+            strokeWidth={strokeWidth}
+            strokeLinecap="round"
+            style={{
+              transition: 'all 0.8s ease-out'
+            }}
+          />
 
-            {/* Pointer */}
-            <g transform={`rotate(${rotation} 100 100)`} className="transition-transform duration-1000">
-              <line
-                x1="100"
-                y1="100"
-                x2="100"
-                y2="35"
-                stroke={scoreInfo.color}
-                strokeWidth="3"
-                strokeLinecap="round"
-              />
-              <circle cx="100" cy="100" r="8" fill={scoreInfo.color} />
-              <circle cx="100" cy="100" r="4" fill="white" />
-            </g>
+          {/* Ponteiro */}
+          <line
+            x1={centerX}
+            y1={centerY}
+            x2={pointerX}
+            y2={pointerY}
+            stroke="#374151"
+            strokeWidth={3}
+            strokeLinecap="round"
+            style={{ transition: 'all 0.8s ease-out' }}
+          />
 
-            {/* Labels */}
-            <text x="20" y="115" fontSize="10" fill="currentColor" className="text-muted-foreground">0</text>
-            <text x="95" y="18" fontSize="10" fill="currentColor" className="text-muted-foreground">50</text>
-            <text x="170" y="115" fontSize="10" fill="currentColor" className="text-muted-foreground">100</text>
-          </svg>
+          {/* Centro do ponteiro */}
+          <circle cx={centerX} cy={centerY} r={10} fill="#374151" />
+          <circle cx={centerX} cy={centerY} r={5} fill="white" />
 
-          {/* Score number */}
-          <div className="absolute inset-0 flex flex-col items-center justify-end pb-2">
-            <span className="text-4xl font-bold" style={{ color: scoreInfo.color }}>
-              {score}
-            </span>
-            <span className="text-sm font-medium" style={{ color: scoreInfo.color }}>
-              {scoreInfo.label}
-            </span>
+          {/* Labels */}
+          <text
+            x={padding / 2 + strokeWidth / 2}
+            y={centerY + 20}
+            textAnchor="start"
+            fontSize={11}
+            fill="#9ca3af"
+          >
+            0
+          </text>
+          <text
+            x={centerX}
+            y={centerY - radius - 8}
+            textAnchor="middle"
+            fontSize={11}
+            fill="#9ca3af"
+          >
+            50
+          </text>
+          <text
+            x={size - padding / 2 - strokeWidth / 2}
+            y={centerY + 20}
+            textAnchor="end"
+            fontSize={11}
+            fill="#9ca3af"
+          >
+            100
+          </text>
+        </svg>
+
+        {/* Score e label central */}
+        <div
+          className="absolute left-1/2 transform -translate-x-1/2 text-center"
+          style={{ bottom: 0 }}
+        >
+          <div
+            className="text-5xl font-bold tracking-tight"
+            style={{ color: info.color }}
+          >
+            {normalizedScore}
+          </div>
+          <div
+            className="text-xs font-semibold px-3 py-1 rounded-full mt-1 inline-block"
+            style={{ backgroundColor: info.bgLight, color: info.color }}
+          >
+            {info.label}
           </div>
         </div>
+      </div>
 
-        {/* Trend indicator */}
-        {previousScore !== undefined && (
-          <div className="flex items-center justify-center gap-2 mt-4">
-            {trend === 'up' && (
-              <div className="flex items-center gap-1 text-green-500 text-sm">
-                <TrendingUp className="h-4 w-4" />
-                <span>+{diff} pts</span>
-              </div>
-            )}
-            {trend === 'down' && (
-              <div className="flex items-center gap-1 text-red-500 text-sm">
-                <TrendingDown className="h-4 w-4" />
-                <span>{diff} pts</span>
-              </div>
-            )}
-            {trend === 'stable' && (
-              <div className="flex items-center gap-1 text-muted-foreground text-sm">
-                <Minus className="h-4 w-4" />
-                <span>Estável</span>
-              </div>
-            )}
-            <span className="text-xs text-muted-foreground">vs ontem</span>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+      {/* Variação */}
+      {previousScore !== undefined && diff !== 0 && (
+        <div className={`text-sm mt-2 ${diff > 0 ? 'text-green-600' : 'text-red-600'}`}>
+          {diff > 0 ? '↑' : '↓'} {Math.abs(diff)} pts vs ontem
+        </div>
+      )}
+    </div>
   )
 }
+
+export default ScoreGauge

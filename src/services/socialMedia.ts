@@ -9,8 +9,15 @@
 
 const YOUTUBE_API_KEY = 'AIzaSyDiWL7KRLW16HrfxAT2bXpdoL5tpltuTU0'
 
-// RapidAPI - Você pode obter uma chave grátis em rapidapi.com
-// Essas APIs tem tier gratuito limitado mas funcional
+// ============================================
+// APIFY - $5/mês GRÁTIS - MELHOR OPÇÃO!
+// Cadastre em: https://apify.com (tier gratuito generoso)
+// Instagram: ~2.100 posts/mês grátis
+// TikTok: ~16.600 posts/mês grátis
+// ============================================
+const APIFY_TOKEN = '' // Preencher com sua chave Apify (grátis)
+
+// RapidAPI - Alternativa (tier gratuito mais limitado)
 const RAPIDAPI_KEY = '' // Preencher com sua chave RapidAPI
 
 // ============================================
@@ -56,14 +63,20 @@ export interface SocialSearchResult {
 
 export async function searchYouTube(query: string, maxResults = 10): Promise<SocialSearchResult> {
   try {
+    // Últimas 24 horas
+    const yesterday = new Date()
+    yesterday.setDate(yesterday.getDate() - 1)
+    const publishedAfter = yesterday.toISOString()
+
     const params = new URLSearchParams({
       part: 'snippet',
       q: query,
       type: 'video',
-      maxResults: String(maxResults),
-      order: 'date',
+      maxResults: String(maxResults * 2), // Busca mais para filtrar depois
+      order: 'viewCount', // Ordenar por views
       relevanceLanguage: 'pt',
       regionCode: 'BR',
+      publishedAfter: publishedAfter, // Últimas 24h
       key: YOUTUBE_API_KEY
     })
 
@@ -183,110 +196,189 @@ export async function searchTwitter(query: string, maxResults = 10): Promise<Soc
 }
 
 // ============================================
-// INSTAGRAM - Via RapidAPI (Instagram API)
+// INSTAGRAM - Via Apify (GRÁTIS $5/mês) ou RapidAPI
+// Apify: https://apify.com/apify/instagram-scraper
 // ============================================
 
 export async function searchInstagram(query: string, maxResults = 10): Promise<SocialSearchResult> {
-  if (!RAPIDAPI_KEY) {
-    return generateMockInstagramData(query, maxResults)
-  }
+  // Tenta Apify primeiro (melhor opção, grátis)
+  if (APIFY_TOKEN) {
+    try {
+      const hashtag = query.replace(/\s+/g, '').toLowerCase()
 
-  try {
-    // Busca por hashtag
-    const hashtag = query.replace(/\s+/g, '').toLowerCase()
-    const response = await fetch(
-      `https://instagram-scraper-api2.p.rapidapi.com/v1/hashtag?hashtag=${hashtag}`,
-      {
-        headers: {
-          'X-RapidAPI-Key': RAPIDAPI_KEY,
-          'X-RapidAPI-Host': 'instagram-scraper-api2.p.rapidapi.com'
+      // Apify Actor para Instagram hashtag search
+      const response = await fetch(
+        `https://api.apify.com/v2/acts/apify~instagram-hashtag-scraper/run-sync-get-dataset-items?token=${APIFY_TOKEN}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            hashtags: [hashtag],
+            resultsLimit: maxResults,
+            resultsType: 'posts'
+          })
         }
+      )
+
+      if (response.ok) {
+        const data = await response.json()
+        const posts: SocialPost[] = (data || []).slice(0, maxResults).map((post: any) => ({
+          id: post.id || post.shortCode,
+          platform: 'instagram' as const,
+          author: post.ownerUsername || 'Unknown',
+          authorHandle: post.ownerUsername,
+          content: post.caption || '',
+          url: post.url || `https://instagram.com/p/${post.shortCode}`,
+          publishedAt: post.timestamp || new Date().toISOString(),
+          thumbnail: post.displayUrl,
+          likes: post.likesCount || 0,
+          comments: post.commentsCount || 0,
+          views: post.videoViewCount || 0,
+          sentiment: analyzeSentiment(post.caption || '') as any
+        }))
+
+        posts.sort((a, b) => (b.likes || 0) - (a.likes || 0))
+        return { platform: 'instagram', posts, totalResults: posts.length }
       }
-    )
-
-    if (!response.ok) {
-      throw new Error('Instagram API error')
+    } catch (error) {
+      console.error('Apify Instagram error:', error)
     }
-
-    const data = await response.json()
-
-    const posts: SocialPost[] = data.data?.items?.slice(0, maxResults).map((post: any) => ({
-      id: post.id,
-      platform: 'instagram' as const,
-      author: post.user?.username || 'Unknown',
-      authorHandle: post.user?.username,
-      content: post.caption?.text || '',
-      url: `https://instagram.com/p/${post.code}`,
-      publishedAt: new Date(post.taken_at * 1000).toISOString(),
-      thumbnail: post.image_versions?.items?.[0]?.url,
-      likes: post.like_count || 0,
-      comments: post.comment_count || 0,
-      views: post.play_count || post.view_count || 0,
-      sentiment: analyzeSentiment(post.caption?.text || '') as any
-    })) || []
-
-    posts.sort((a, b) => (b.likes || 0) - (a.likes || 0))
-
-    return {
-      platform: 'instagram',
-      posts,
-      totalResults: posts.length
-    }
-  } catch (error) {
-    console.error('Instagram search error:', error)
-    return generateMockInstagramData(query, maxResults)
   }
+
+  // Fallback para RapidAPI
+  if (RAPIDAPI_KEY) {
+    try {
+      const hashtag = query.replace(/\s+/g, '').toLowerCase()
+      const response = await fetch(
+        `https://instagram-scraper-api2.p.rapidapi.com/v1/hashtag?hashtag=${hashtag}`,
+        {
+          headers: {
+            'X-RapidAPI-Key': RAPIDAPI_KEY,
+            'X-RapidAPI-Host': 'instagram-scraper-api2.p.rapidapi.com'
+          }
+        }
+      )
+
+      if (response.ok) {
+        const data = await response.json()
+        const posts: SocialPost[] = data.data?.items?.slice(0, maxResults).map((post: any) => ({
+          id: post.id,
+          platform: 'instagram' as const,
+          author: post.user?.username || 'Unknown',
+          authorHandle: post.user?.username,
+          content: post.caption?.text || '',
+          url: `https://instagram.com/p/${post.code}`,
+          publishedAt: new Date(post.taken_at * 1000).toISOString(),
+          thumbnail: post.image_versions?.items?.[0]?.url,
+          likes: post.like_count || 0,
+          comments: post.comment_count || 0,
+          views: post.play_count || post.view_count || 0,
+          sentiment: analyzeSentiment(post.caption?.text || '') as any
+        })) || []
+
+        posts.sort((a, b) => (b.likes || 0) - (a.likes || 0))
+        return { platform: 'instagram', posts, totalResults: posts.length }
+      }
+    } catch (error) {
+      console.error('RapidAPI Instagram error:', error)
+    }
+  }
+
+  // Fallback para dados mock
+  return generateMockInstagramData(query, maxResults)
 }
 
 // ============================================
-// TIKTOK - Via RapidAPI (TikTok API)
+// TIKTOK - Via Apify (GRÁTIS $5/mês) ou RapidAPI
+// Apify: https://apify.com/clockworks/tiktok-scraper
+// ~16.600 posts/mês GRÁTIS
 // ============================================
 
 export async function searchTikTok(query: string, maxResults = 10): Promise<SocialSearchResult> {
-  if (!RAPIDAPI_KEY) {
-    return generateMockTikTokData(query, maxResults)
+  // Tenta Apify primeiro (melhor opção, grátis)
+  if (APIFY_TOKEN) {
+    try {
+      const response = await fetch(
+        `https://api.apify.com/v2/acts/clockworks~tiktok-scraper/run-sync-get-dataset-items?token=${APIFY_TOKEN}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            searchQueries: [query],
+            resultsPerPage: maxResults,
+            shouldDownloadVideos: false,
+            shouldDownloadCovers: false
+          })
+        }
+      )
+
+      if (response.ok) {
+        const data = await response.json()
+        const posts: SocialPost[] = (data || []).slice(0, maxResults).map((video: any) => ({
+          id: video.id || video.videoId,
+          platform: 'tiktok' as const,
+          author: video.authorMeta?.name || video.author || 'Unknown',
+          authorHandle: video.authorMeta?.nickName || video.authorMeta?.name,
+          content: video.text || video.desc || '',
+          url: video.webVideoUrl || `https://tiktok.com/@${video.authorMeta?.name}/video/${video.id}`,
+          publishedAt: video.createTimeISO || new Date().toISOString(),
+          thumbnail: video.videoMeta?.coverUrl || video.covers?.[0],
+          views: video.playCount || 0,
+          likes: video.diggCount || 0,
+          comments: video.commentCount || 0,
+          shares: video.shareCount || 0,
+          sentiment: analyzeSentiment(video.text || video.desc || '') as any
+        }))
+
+        posts.sort((a, b) => (b.views || 0) - (a.views || 0))
+        return { platform: 'tiktok', posts, totalResults: posts.length }
+      }
+    } catch (error) {
+      console.error('Apify TikTok error:', error)
+    }
   }
 
-  try {
-    const response = await fetch(
-      `https://tiktok-scraper7.p.rapidapi.com/feed/search?keywords=${encodeURIComponent(query)}&count=${maxResults}&region=br`,
-      {
-        headers: {
-          'X-RapidAPI-Key': RAPIDAPI_KEY,
-          'X-RapidAPI-Host': 'tiktok-scraper7.p.rapidapi.com'
+  // Fallback para RapidAPI
+  if (RAPIDAPI_KEY) {
+    try {
+      const response = await fetch(
+        `https://tiktok-scraper7.p.rapidapi.com/feed/search?keywords=${encodeURIComponent(query)}&count=${maxResults}&region=br`,
+        {
+          headers: {
+            'X-RapidAPI-Key': RAPIDAPI_KEY,
+            'X-RapidAPI-Host': 'tiktok-scraper7.p.rapidapi.com'
+          }
         }
+      )
+
+      if (response.ok) {
+        const data = await response.json()
+        const posts: SocialPost[] = data.data?.videos?.map((video: any) => ({
+          id: video.video_id,
+          platform: 'tiktok' as const,
+          author: video.author?.nickname || 'Unknown',
+          authorHandle: video.author?.unique_id,
+          content: video.title || video.desc || '',
+          url: `https://tiktok.com/@${video.author?.unique_id}/video/${video.video_id}`,
+          publishedAt: new Date(video.create_time * 1000).toISOString(),
+          thumbnail: video.cover,
+          views: video.play_count || 0,
+          likes: video.digg_count || 0,
+          comments: video.comment_count || 0,
+          shares: video.share_count || 0,
+          sentiment: analyzeSentiment(video.title || video.desc || '') as any
+        })) || []
+
+        posts.sort((a, b) => (b.views || 0) - (a.views || 0))
+        return { platform: 'tiktok', posts, totalResults: posts.length }
       }
-    )
-
-    if (!response.ok) {
-      throw new Error('TikTok API error')
+    } catch (error) {
+      console.error('RapidAPI TikTok error:', error)
     }
+  }
 
-    const data = await response.json()
-
-    const posts: SocialPost[] = data.data?.videos?.map((video: any) => ({
-      id: video.video_id,
-      platform: 'tiktok' as const,
-      author: video.author?.nickname || 'Unknown',
-      authorHandle: video.author?.unique_id,
-      content: video.title || video.desc || '',
-      url: `https://tiktok.com/@${video.author?.unique_id}/video/${video.video_id}`,
-      publishedAt: new Date(video.create_time * 1000).toISOString(),
-      thumbnail: video.cover,
-      views: video.play_count || 0,
-      likes: video.digg_count || 0,
-      comments: video.comment_count || 0,
-      shares: video.share_count || 0,
-      sentiment: analyzeSentiment(video.title || video.desc || '') as any
-    })) || []
-
-    posts.sort((a, b) => (b.views || 0) - (a.views || 0))
-
-    return {
-      platform: 'tiktok',
-      posts,
-      totalResults: posts.length
-    }
+  // Fallback para dados mock
+  return generateMockTikTokData(query, maxResults)
   } catch (error) {
     console.error('TikTok search error:', error)
     return generateMockTikTokData(query, maxResults)
