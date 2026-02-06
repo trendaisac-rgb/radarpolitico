@@ -74,14 +74,42 @@ function parseRSSFeed(xmlText: string, maxResults: number): NewsArticle[] {
 
 /**
  * Extrai a URL real do link do Google News
- * O Google News redireciona através de um link próprio
+ * O Google News codifica a URL real em base64 no parâmetro
  */
 function extractRealUrl(googleNewsUrl: string): string {
-  // Links do Google News são no formato:
-  // https://news.google.com/rss/articles/...
-  // Por enquanto, retornamos o link original
-  // Em produção, seria necessário seguir o redirect
-  return googleNewsUrl
+  try {
+    // Links do Google News têm formato:
+    // https://news.google.com/rss/articles/CBMi...
+    // A parte após "articles/" é base64 que contém a URL real
+
+    if (googleNewsUrl.includes('news.google.com')) {
+      // Tenta extrair a URL do formato base64
+      const match = googleNewsUrl.match(/articles\/([^?]+)/)
+      if (match && match[1]) {
+        // O base64 do Google tem um formato especial
+        // Decodifica e extrai a URL
+        const encoded = match[1]
+        try {
+          // Tenta decodificar base64
+          const decoded = atob(encoded.replace(/-/g, '+').replace(/_/g, '/'))
+          // Busca por URLs no texto decodificado
+          const urlMatch = decoded.match(/https?:\/\/[^\s"<>]+/)
+          if (urlMatch) {
+            return urlMatch[0]
+          }
+        } catch {
+          // Se falhar a decodificação, retorna o original
+        }
+      }
+
+      // Fallback: retorna URL do Google News que pelo menos funciona como redirect
+      return googleNewsUrl
+    }
+
+    return googleNewsUrl
+  } catch {
+    return googleNewsUrl
+  }
 }
 
 /**
