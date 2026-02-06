@@ -4,9 +4,9 @@
  */
 
 import { useState, useCallback } from 'react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQueryClient } from '@tanstack/react-query'
 import { monitorPolitician, monitorAllPoliticians, generateDailyReport, type MonitoringResult } from '@/services/monitor'
-import type { Politician } from '@/integrations/supabase/types'
+import type { Politician } from '@/integrations/supabase/client'
 
 interface UseMonitoringReturn {
   isMonitoring: boolean

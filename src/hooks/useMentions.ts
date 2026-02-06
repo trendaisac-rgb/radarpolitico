@@ -4,8 +4,7 @@
  */
 
 import { useQuery } from '@tanstack/react-query'
-import { supabase } from '@/integrations/supabase/client'
-import type { Mention, SentimentType } from '@/integrations/supabase/types'
+import { supabase, type Mention, type SentimentType } from '@/integrations/supabase/client'
 
 interface MentionsFilter {
   politicianId?: number
@@ -70,11 +69,13 @@ export function useMentionStats(politicianId: number) {
 
       if (error) throw error
 
+      const mentions = data as { sentiment: SentimentType | null }[]
+
       const stats = {
-        total: data.length,
-        positive: data.filter(m => m.sentiment === 'positivo').length,
-        negative: data.filter(m => m.sentiment === 'negativo').length,
-        neutral: data.filter(m => m.sentiment === 'neutro').length,
+        total: mentions.length,
+        positive: mentions.filter(m => m.sentiment === 'positivo').length,
+        negative: mentions.filter(m => m.sentiment === 'negativo').length,
+        neutral: mentions.filter(m => m.sentiment === 'neutro').length,
       }
 
       return {

@@ -4,8 +4,7 @@
  */
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '@/integrations/supabase/client'
-import type { Politician, Insertable, Updatable } from '@/integrations/supabase/types'
+import { supabase, type Politician, type PoliticianInsert, type PoliticianUpdate } from '@/integrations/supabase/client'
 
 // Buscar todos os políticos do usuário
 export function usePoliticians() {
@@ -46,7 +45,7 @@ export function useCreatePolitician() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async (politician: Insertable<'politicians'>) => {
+    mutationFn: async (politician: PoliticianInsert) => {
       const { data, error } = await supabase
         .from('politicians')
         .insert(politician)
@@ -67,7 +66,7 @@ export function useUpdatePolitician() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async ({ id, ...updates }: Updatable<'politicians'> & { id: number }) => {
+    mutationFn: async ({ id, ...updates }: PoliticianUpdate & { id: number }) => {
       const { data, error } = await supabase
         .from('politicians')
         .update(updates)

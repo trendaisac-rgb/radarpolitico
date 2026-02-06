@@ -3,9 +3,8 @@
  * Usa IA para analisar sentimento e relevância das notícias
  */
 
-import { supabase } from '@/integrations/supabase/client'
+import { supabase, type SentimentType } from '@/integrations/supabase/client'
 import type { NewsArticle } from './googleNews'
-import type { SentimentType } from '@/integrations/supabase/types'
 
 export interface AnalyzedArticle extends NewsArticle {
   sentiment: SentimentType

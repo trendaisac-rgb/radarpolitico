@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { ArrowLeft, UserPlus, Loader2 } from 'lucide-react'
-import { supabase } from '@/integrations/supabase/client'
+import { supabase, type PoliticianInsert } from '@/integrations/supabase/client'
 import { toast } from 'sonner'
 
 const ESTADOS_BR = [
@@ -57,22 +57,24 @@ export default function AddPolitician() {
     setIsSubmitting(true)
 
     try {
+      const newPolitician: PoliticianInsert = {
+        user_id: '00000000-0000-0000-0000-000000000000',
+        name: formData.name.trim(),
+        nickname: formData.nickname.trim() || null,
+        party: formData.party || null,
+        position: formData.position.trim() || null,
+        state: formData.state || null,
+        city: formData.city.trim() || null,
+        whatsapp: formData.whatsapp.trim() || null,
+        email: formData.email.trim() || null,
+        is_active: true,
+        notify_whatsapp: true,
+        notify_email: true
+      }
+      
       const { error } = await supabase
         .from('politicians')
-        .insert({
-          user_id: '00000000-0000-0000-0000-000000000000',
-          name: formData.name.trim(),
-          nickname: formData.nickname.trim() || null,
-          party: formData.party || null,
-          position: formData.position.trim() || null,
-          state: formData.state || null,
-          city: formData.city.trim() || null,
-          whatsapp: formData.whatsapp.trim() || null,
-          email: formData.email.trim() || null,
-          is_active: true,
-          notify_whatsapp: true,
-          notify_email: true
-        })
+        .insert(newPolitician)
 
       if (error) throw error
 
