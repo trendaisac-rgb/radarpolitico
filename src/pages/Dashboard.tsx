@@ -19,8 +19,7 @@ import {
 import { usePoliticians } from '@/hooks/usePoliticians'
 import { useMentions, useMentionStats } from '@/hooks/useMentions'
 import { useMonitoring } from '@/hooks/useMonitoring'
-import { supabase } from '@/integrations/supabase/client'
-import type { Politician } from '@/integrations/supabase/types'
+import { supabase, type Politician } from '@/integrations/supabase/client'
 import { toast } from 'sonner'
 
 // Novos componentes do dashboard
