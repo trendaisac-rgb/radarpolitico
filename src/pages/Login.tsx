@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { BarChart3, Loader2, Mail, Lock, User, ArrowLeft } from 'lucide-react'
-import { supabase, isSupabaseConfigured } from '@/integrations/supabase/client'
+import { supabase } from '@/integrations/supabase/client'
 import { toast } from 'sonner'
 
 export default function Login() {
@@ -29,11 +29,6 @@ export default function Login() {
   // Verifica se já está logado
   useEffect(() => {
     const checkAuth = async () => {
-      if (!isSupabaseConfigured()) {
-        setCheckingAuth(false)
-        return
-      }
-
       const { data: { session } } = await supabase.auth.getSession()
       if (session) {
         navigate('/dashboard')
@@ -124,28 +119,6 @@ export default function Login() {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    )
-  }
-
-  // Aviso se Supabase não está configurado
-  if (!isSupabaseConfigured()) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <Card className="max-w-md w-full">
-          <CardHeader>
-            <CardTitle>Configuração Necessária</CardTitle>
-            <CardDescription>
-              Configure as variáveis de ambiente do Supabase para habilitar o login.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button variant="outline" onClick={() => navigate('/')}>
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Voltar
-            </Button>
-          </CardContent>
-        </Card>
       </div>
     )
   }

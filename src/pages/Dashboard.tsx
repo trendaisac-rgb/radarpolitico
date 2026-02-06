@@ -19,7 +19,8 @@ import {
 import { usePoliticians } from '@/hooks/usePoliticians'
 import { useMentions, useMentionStats } from '@/hooks/useMentions'
 import { useMonitoring } from '@/hooks/useMonitoring'
-import { supabase, type Politician } from '@/integrations/supabase/client'
+import { supabase } from '@/integrations/supabase/client'
+import type { Politician } from '@/integrations/supabase/types'
 import { toast } from 'sonner'
 
 // Novos componentes do dashboard
@@ -178,11 +179,6 @@ export default function Dashboard() {
   // Verifica autenticação
   useEffect(() => {
     const checkAuth = async () => {
-      if (!isSupabaseConfigured()) {
-        setCheckingAuth(false)
-        return
-      }
-
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) {
         navigate('/login')
