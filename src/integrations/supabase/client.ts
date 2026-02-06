@@ -6,13 +6,8 @@
 import { createClient } from '@supabase/supabase-js'
 import type { Database } from './types'
 
-// Variáveis de ambiente - serão configuradas no .env
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || ''
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || ''
-
-if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-  console.warn('⚠️ Supabase não configurado. Configure VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no .env')
-}
+const SUPABASE_URL = "https://opwibtfwlfilzqwsmppo.supabase.co"
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9wd2lidGZ3bGZpbHpxd3NtcHBvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAyMjQzMDgsImV4cCI6MjA4NTgwMDMwOH0.CFD3sNYBc5TGAZ9zm2bav2vpoaCelosb5M8QmLNvK2g"
 
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
@@ -22,5 +17,13 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY, 
   }
 })
 
-// Helper para verificar se está configurado
-export const isSupabaseConfigured = () => Boolean(SUPABASE_URL && SUPABASE_ANON_KEY)
+// Type helpers for better type inference
+export type Politician = Database['public']['Tables']['politicians']['Row']
+export type Mention = Database['public']['Tables']['mentions']['Row']
+export type Alert = Database['public']['Tables']['alerts']['Row']
+export type DailyReport = Database['public']['Tables']['daily_reports']['Row']
+export type SentimentType = Database['public']['Enums']['sentiment_type']
+
+export type PoliticianInsert = Database['public']['Tables']['politicians']['Insert']
+export type PoliticianUpdate = Database['public']['Tables']['politicians']['Update']
+export type MentionInsert = Database['public']['Tables']['mentions']['Insert']

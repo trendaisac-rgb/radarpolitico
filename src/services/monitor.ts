@@ -3,10 +3,9 @@
  * Orquestra a busca, análise e salvamento de menções
  */
 
-import { supabase } from '@/integrations/supabase/client'
+import { supabase, type Politician, type Mention, type MentionInsert, type SentimentType } from '@/integrations/supabase/client'
 import { searchPoliticianNews, type NewsArticle } from './googleNews'
 import { analyzeArticleSimple, type AnalyzedArticle } from './analyzer'
-import type { Politician, Mention } from '@/integrations/supabase/types'
 
 export interface MonitoringResult {
   politicianId: number
@@ -96,14 +95,15 @@ async function getExistingHashes(politicianId: number): Promise<Set<string>> {
     return new Set()
   }
 
-  return new Set(data.map(m => m.content_hash))
+  const mentions = data as { content_hash: string }[]
+  return new Set(mentions.map(m => m.content_hash))
 }
 
 /**
  * Salva menções no banco de dados
  */
 async function saveMentions(politicianId: number, articles: AnalyzedArticle[]): Promise<void> {
-  const mentions = articles.map(article => ({
+  const mentions: MentionInsert[] = articles.map(article => ({
     politician_id: politicianId,
     title: article.title,
     content: article.description,
@@ -147,14 +147,16 @@ export async function monitorAllPoliticians(): Promise<MonitoringResult[]> {
     return []
   }
 
-  if (!politicians || politicians.length === 0) {
+  const politicianList = politicians as Politician[]
+
+  if (!politicianList || politicianList.length === 0) {
     console.log('⚠️ Nenhum político cadastrado para monitorar')
     return []
   }
 
   // Monitora cada político
   const results: MonitoringResult[] = []
-  for (const politician of politicians) {
+  for (const politician of politicianList) {
     try {
       const result = await monitorPolitician(politician)
       results.push(result)
@@ -188,22 +190,24 @@ export async function generateDailyReport(politicianId: number): Promise<string>
     return 'Não foi possível gerar o relatório.'
   }
 
+  const mentionList = mentions as Mention[]
+
   const stats = {
-    total: mentions.length,
-    positive: mentions.filter(m => m.sentiment === 'positivo').length,
-    negative: mentions.filter(m => m.sentiment === 'negativo').length,
-    neutral: mentions.filter(m => m.sentiment === 'neutro').length,
+    total: mentionList.length,
+    positive: mentionList.filter(m => m.sentiment === 'positivo').length,
+    negative: mentionList.filter(m => m.sentiment === 'negativo').length,
+    neutral: mentionList.filter(m => m.sentiment === 'neutro').length,
   }
 
   // Destaques positivos
-  const positiveHighlights = mentions
+  const positiveHighlights = mentionList
     .filter(m => m.sentiment === 'positivo')
     .slice(0, 3)
     .map(m => `• ${m.title}`)
     .join('\n')
 
   // Alertas negativos
-  const negativeAlerts = mentions
+  const negativeAlerts = mentionList
     .filter(m => m.sentiment === 'negativo')
     .slice(0, 3)
     .map(m => `• ${m.title}`)

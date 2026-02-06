@@ -19,9 +19,8 @@ import {
 import { usePoliticians } from '@/hooks/usePoliticians'
 import { useMentions, useMentionStats } from '@/hooks/useMentions'
 import { useMonitoring } from '@/hooks/useMonitoring'
-import { isSupabaseConfigured, supabase } from '@/integrations/supabase/client'
+import { supabase, type Politician } from '@/integrations/supabase/client'
 import { toast } from 'sonner'
-import type { Politician } from '@/integrations/supabase/types'
 
 // Novos componentes do dashboard
 import { ScoreCard, calculateScore } from '@/components/dashboard/ScoreCard'
@@ -193,31 +192,6 @@ export default function Dashboard() {
   }, [politicians, selectedPolitician])
 
   const currentPolitician = politicians?.find(p => p.id === selectedPolitician)
-
-  // Verifica configuração do Supabase
-  if (!isSupabaseConfigured()) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <Card className="max-w-md w-full">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-yellow-500" />
-              Configuração Necessária
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Configure as variáveis de ambiente do Supabase no Lovable:
-            </p>
-            <div className="bg-muted p-3 rounded-md font-mono text-xs space-y-1">
-              <p>VITE_SUPABASE_URL</p>
-              <p>VITE_SUPABASE_ANON_KEY</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
 
   // Executar monitoramento
   const handleRunMonitoring = async () => {
