@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Radar, Menu, X } from "lucide-react";
+import { Radar, Menu, X, LogIn } from "lucide-react";
 import { getWhatsAppUrl } from "@/lib/constants";
 
 export function Navbar() {
@@ -61,6 +62,12 @@ export function Navbar() {
             >
               FAQ
             </a>
+            <Button variant="ghost" asChild>
+              <Link to="/login">
+                <LogIn className="w-4 h-4 mr-2" />
+                Entrar
+              </Link>
+            </Button>
             <Button
               asChild
               className="bg-accent hover:bg-accent/90 text-accent-foreground"
@@ -117,6 +124,12 @@ export function Navbar() {
               >
                 FAQ
               </a>
+              <Button variant="outline" asChild className="w-full">
+                <Link to="/login" onClick={() => setIsMobileMenuOpen(false)}>
+                  <LogIn className="w-4 h-4 mr-2" />
+                  Entrar
+                </Link>
+              </Button>
               <Button
                 asChild
                 className="bg-accent hover:bg-accent/90 text-accent-foreground w-full"

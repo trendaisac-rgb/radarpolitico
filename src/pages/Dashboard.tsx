@@ -14,7 +14,7 @@ import {
   TrendingUp, TrendingDown, Minus, Bell, RefreshCw,
   Newspaper, Users, BarChart3, Settings, Plus,
   ExternalLink, AlertTriangle, CheckCircle2, Loader2,
-  Play, Clock, Zap, Home
+  Play, Clock, Zap, Home, LogOut
 } from 'lucide-react'
 import { usePoliticians } from '@/hooks/usePoliticians'
 import { useMentions, useMentionStats } from '@/hooks/useMentions'
@@ -172,6 +172,45 @@ function EmptyState({ onAddPolitician }: { onAddPolitician: () => void }) {
 export default function Dashboard() {
   const navigate = useNavigate()
   const [selectedPolitician, setSelectedPolitician] = useState<number | null>(null)
+  const [user, setUser] = useState<any>(null)
+  const [checkingAuth, setCheckingAuth] = useState(true)
+
+  // Verifica autenticação
+  useEffect(() => {
+    const checkAuth = async () => {
+      if (!isSupabaseConfigured()) {
+        setCheckingAuth(false)
+        return
+      }
+
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        navigate('/login')
+        return
+      }
+      setUser(session.user)
+      setCheckingAuth(false)
+    }
+    checkAuth()
+
+    // Escuta mudanças de auth
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!session) {
+        navigate('/login')
+      } else {
+        setUser(session.user)
+      }
+    })
+
+    return () => subscription.unsubscribe()
+  }, [navigate])
+
+  // Função de logout
+  const handleLogout = async () => {
+    await supabase.auth.signOut()
+    toast.success('Logout realizado')
+    navigate('/login')
+  }
 
   // Hooks de dados
   const { data: politicians, isLoading: loadingPoliticians, refetch: refetchPoliticians } = usePoliticians()
@@ -221,8 +260,8 @@ export default function Dashboard() {
     }
   }
 
-  // Loading inicial
-  if (loadingPoliticians) {
+  // Loading inicial (auth + data)
+  if (checkingAuth || loadingPoliticians) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -267,11 +306,19 @@ export default function Dashboard() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {user && (
+              <span className="text-xs text-muted-foreground hidden sm:block">
+                {user.email}
+              </span>
+            )}
             <Button variant="ghost" size="icon" onClick={() => navigate('/')}>
               <Home className="h-4 w-4" />
             </Button>
             <Button variant="outline" size="icon">
               <Bell className="h-4 w-4" />
+            </Button>
+            <Button variant="ghost" size="icon" onClick={handleLogout} title="Sair">
+              <LogOut className="h-4 w-4" />
             </Button>
           </div>
         </div>
