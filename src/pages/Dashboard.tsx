@@ -128,10 +128,21 @@ function MentionCard({ mention }: { mention: any }) {
               {mention.summary || mention.content?.substring(0, 150)}
             </p>
           </div>
-          <Button variant="ghost" size="icon" asChild className="shrink-0">
-            <a href={mention.url} target="_blank" rel="noopener noreferrer">
-              <ExternalLink className="h-4 w-4" />
-            </a>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="shrink-0"
+            type="button"
+            onClick={() => {
+              // Em alguns ambientes (ex.: iframe sandbox), <a target="_blank"> pode ser bloqueado.
+              // Usamos window.open para garantir abertura em nova aba com noopener/noreferrer.
+              const url = mention.url
+              if (!url) return
+              window.open(url, '_blank', 'noopener,noreferrer')
+            }}
+            title="Abrir notícia"
+          >
+            <ExternalLink className="h-4 w-4" />
           </Button>
         </div>
         <div className="flex items-center gap-2 mt-3 text-xs text-muted-foreground">
