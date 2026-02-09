@@ -198,53 +198,17 @@ export function generateReportHTML(data: ReportData): string {
 }
 
 /**
- * Exporta relatório como PDF usando html2canvas + jsPDF
- * (Requer instalação: npm install html2canvas jspdf)
+ * Exporta relatório como PDF usando a função de impressão do navegador
+ * Abre uma nova janela com o relatório formatado para impressão/PDF
  */
-export async function exportToPDF(data: ReportData): Promise<Blob | null> {
+export async function exportToPDF(data: ReportData): Promise<boolean> {
   try {
-    // Importação dinâmica para evitar erros se não estiver instalado
-    const html2canvas = (await import('html2canvas' as any)).default
-    const { jsPDF } = await import('jspdf' as any)
-
-    // Cria elemento temporário com o HTML
-    const container = document.createElement('div')
-    container.innerHTML = generateReportHTML(data)
-    container.style.position = 'absolute'
-    container.style.left = '-9999px'
-    container.style.width = '600px'
-    document.body.appendChild(container)
-
-    // Aguarda renderização
-    await new Promise(resolve => setTimeout(resolve, 100))
-
-    // Captura como canvas
-    const canvas = await html2canvas(container.querySelector('.container') as HTMLElement, {
-      scale: 2,
-      useCORS: true,
-      logging: false
-    })
-
-    // Remove elemento temporário
-    document.body.removeChild(container)
-
-    // Cria PDF
-    const imgData = canvas.toDataURL('image/png')
-    const pdf = new jsPDF({
-      orientation: 'portrait',
-      unit: 'mm',
-      format: 'a4'
-    })
-
-    const imgWidth = 210 // A4 width in mm
-    const imgHeight = (canvas.height * imgWidth) / canvas.width
-
-    pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight)
-
-    return pdf.output('blob')
+    // Usa o método de impressão nativo do navegador
+    printReport(data)
+    return true
   } catch (error) {
     console.error('Erro ao gerar PDF:', error)
-    return null
+    return false
   }
 }
 

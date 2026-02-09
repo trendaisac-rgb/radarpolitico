@@ -14,7 +14,7 @@ import {
   BarChart3, RefreshCw, Plus, Home, LogOut, Bell,
   Newspaper, TrendingUp, TrendingDown, Minus, Loader2,
   AlertTriangle, CheckCircle2, Info, ExternalLink,
-  Clock, Zap, Play, Sparkles
+  Clock, Zap, Play, Sparkles, FileDown
 } from 'lucide-react'
 import { supabase, type Politician, type Mention } from '@/integrations/supabase/client'
 import { toast } from 'sonner'
@@ -32,6 +32,17 @@ import { useMentions, useMentionStats } from '@/hooks/useMentions'
 import { useMonitoring } from '@/hooks/useMonitoring'
 import { searchAllNetworks, type SocialSearchResult } from '@/services/socialMedia'
 import { analyzeWithAI, type AIAnalysisResult, isAIConfigured } from '@/services/aiAnalysis'
+import { printReport, shareViaWhatsApp, type ReportData } from '@/services/reportExport'
+import { DailyReport } from '@/components/dashboard/DailyReport'
+
+// Dialog
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger
+} from '@/components/ui/dialog'
 
 // Ícones das redes
 const networkIcons: Record<string, string> = {
@@ -182,6 +193,7 @@ export default function DashboardPro() {
   // IA Analysis
   const [aiAnalysis, setAIAnalysis] = useState<AIAnalysisResult | null>(null)
   const [loadingAI, setLoadingAI] = useState(false)
+  const [showReportModal, setShowReportModal] = useState(false)
 
   // Auth
   useEffect(() => {
@@ -379,6 +391,46 @@ export default function DashboardPro() {
       }
     : generateAIInsights(mentions, socialResults, score)
 
+  // Prepara dados do relatório para exportação
+  const reportData: ReportData = {
+    politicianName: currentPolitician?.name || 'Político',
+    party: currentPolitician?.party,
+    cargo: currentPolitician?.cargo,
+    date: new Date().toLocaleDateString('pt-BR'),
+    time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+    totalMentions: stats?.total || 0,
+    sentimentScore: aiAnalysis?.sentimentScore || Math.round(score / 10),
+    alertLevel: (aiAnalysis?.alertLevel || alertLevel) as 'verde' | 'amarelo' | 'vermelho',
+    alertMessage: aiAnalysis?.alertReason || alertMessage,
+    summary: insights.summary,
+    topNews: (aiAnalysis?.topNews || mentions.slice(0, 3)).map((item: any, idx) => ({
+      title: item.title || 'Sem título',
+      source: item.source || item.source_name || 'Fonte desconhecida',
+      sentiment: item.sentiment || 'neutro',
+      url: item.url || '#'
+    })),
+    networkMetrics: Object.entries(networkData).map(([key, data]) => ({
+      network: key.charAt(0).toUpperCase() + key.slice(1),
+      mentions: data.mencoes,
+      positive: data.sentimento_positivo,
+      negative: data.sentimento_negativo,
+      score: data.score
+    })),
+    aiRecommendation: insights.recommendations?.join('. ') || 'Continue monitorando diariamente.'
+  }
+
+  // Função para exportar PDF (abre em nova aba para imprimir)
+  const handleExportPDF = () => {
+    printReport(reportData)
+    toast.success('Relatório aberto para impressão')
+  }
+
+  // Função para compartilhar via WhatsApp
+  const handleShareWhatsApp = () => {
+    shareViaWhatsApp(reportData)
+    toast.success('WhatsApp aberto para compartilhamento')
+  }
+
   // Prepara dados das redes
   const networkData = {
     midia: {
@@ -531,6 +583,39 @@ export default function DashboardPro() {
                 )}
               </Button>
             )}
+            <Dialog open={showReportModal} onOpenChange={setShowReportModal}>
+              <DialogTrigger asChild>
+                <Button variant="outline" disabled={mentions.length === 0}>
+                  <FileDown className="h-4 w-4 mr-2" />
+                  Relatório
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Relatório Diário</DialogTitle>
+                </DialogHeader>
+                <DailyReport
+                  politicianName={reportData.politicianName}
+                  party={reportData.party}
+                  cargo={reportData.cargo}
+                  date={reportData.date}
+                  time={reportData.time}
+                  totalMentions={reportData.totalMentions}
+                  sentimentScore={reportData.sentimentScore}
+                  alertLevel={reportData.alertLevel}
+                  alertMessage={reportData.alertMessage}
+                  summary={reportData.summary}
+                  topNews={reportData.topNews.map((n, i) => ({
+                    id: String(i),
+                    ...n,
+                    sentiment: n.sentiment as 'positivo' | 'negativo' | 'neutro'
+                  }))}
+                  aiRecommendation={reportData.aiRecommendation}
+                  onExportPDF={handleExportPDF}
+                  onShare={handleShareWhatsApp}
+                />
+              </DialogContent>
+            </Dialog>
             <Button variant="outline" onClick={() => navigate('/add-politician')}>
               <Plus className="h-4 w-4 mr-2" />
               Novo
