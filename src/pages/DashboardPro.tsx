@@ -292,7 +292,7 @@ export default function DashboardPro() {
       const reportData = {
         politicianName: currentPolitician.name,
         party: currentPolitician.party,
-        position: currentPolitician.cargo,
+        position: currentPolitician.position,
         date: new Date().toLocaleDateString('pt-BR'),
         mentions: mentions.map(m => ({
           title: m.title || '',
@@ -391,46 +391,6 @@ export default function DashboardPro() {
       }
     : generateAIInsights(mentions, socialResults, score)
 
-  // Prepara dados do relatório para exportação
-  const reportData: ReportData = {
-    politicianName: currentPolitician?.name || 'Político',
-    party: currentPolitician?.party,
-    cargo: currentPolitician?.cargo,
-    date: new Date().toLocaleDateString('pt-BR'),
-    time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
-    totalMentions: stats?.total || 0,
-    sentimentScore: aiAnalysis?.sentimentScore || Math.round(score / 10),
-    alertLevel: (aiAnalysis?.alertLevel || alertLevel) as 'verde' | 'amarelo' | 'vermelho',
-    alertMessage: aiAnalysis?.alertReason || alertMessage,
-    summary: insights.summary,
-    topNews: (aiAnalysis?.topNews || mentions.slice(0, 3)).map((item: any, idx) => ({
-      title: item.title || 'Sem título',
-      source: item.source || item.source_name || 'Fonte desconhecida',
-      sentiment: item.sentiment || 'neutro',
-      url: item.url || '#'
-    })),
-    networkMetrics: Object.entries(networkData).map(([key, data]) => ({
-      network: key.charAt(0).toUpperCase() + key.slice(1),
-      mentions: data.mencoes,
-      positive: data.sentimento_positivo,
-      negative: data.sentimento_negativo,
-      score: data.score
-    })),
-    aiRecommendation: insights.recommendations?.join('. ') || 'Continue monitorando diariamente.'
-  }
-
-  // Função para exportar PDF (abre em nova aba para imprimir)
-  const handleExportPDF = () => {
-    printReport(reportData)
-    toast.success('Relatório aberto para impressão')
-  }
-
-  // Função para compartilhar via WhatsApp
-  const handleShareWhatsApp = () => {
-    shareViaWhatsApp(reportData)
-    toast.success('WhatsApp aberto para compartilhamento')
-  }
-
   // Prepara dados das redes
   const networkData = {
     midia: {
@@ -488,6 +448,46 @@ export default function DashboardPro() {
       data.score = Math.max(0, Math.min(100, data.score))
     }
   })
+
+  // Prepara dados do relatório para exportação
+  const reportData: ReportData = {
+    politicianName: currentPolitician?.name || 'Político',
+    party: currentPolitician?.party,
+    cargo: currentPolitician?.position,
+    date: new Date().toLocaleDateString('pt-BR'),
+    time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+    totalMentions: stats?.total || 0,
+    sentimentScore: aiAnalysis?.sentimentScore || Math.round(score / 10),
+    alertLevel: (aiAnalysis?.alertLevel || alertLevel) as 'verde' | 'amarelo' | 'vermelho',
+    alertMessage: aiAnalysis?.alertReason || alertMessage,
+    summary: insights.summary,
+    topNews: (aiAnalysis?.topNews || mentions.slice(0, 3)).map((item: any, idx) => ({
+      title: item.title || 'Sem título',
+      source: item.source || item.source_name || 'Fonte desconhecida',
+      sentiment: item.sentiment || 'neutro',
+      url: item.url || '#'
+    })),
+    networkMetrics: Object.entries(networkData).map(([key, data]) => ({
+      network: key.charAt(0).toUpperCase() + key.slice(1),
+      mentions: data.mencoes,
+      positive: data.sentimento_positivo,
+      negative: data.sentimento_negativo,
+      score: data.score
+    })),
+    aiRecommendation: insights.recommendations?.join('. ') || 'Continue monitorando diariamente.'
+  }
+
+  // Função para exportar PDF
+  const handleExportPDF = () => {
+    printReport(reportData)
+    toast.success('Relatório aberto para impressão')
+  }
+
+  // Função para compartilhar via WhatsApp
+  const handleShareWhatsApp = () => {
+    shareViaWhatsApp(reportData)
+    toast.success('WhatsApp aberto para compartilhamento')
+  }
 
   // Loading
   if (checkingAuth || loadingPoliticians) {
