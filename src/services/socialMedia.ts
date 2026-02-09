@@ -14,11 +14,12 @@ const YOUTUBE_API_KEY = 'AIzaSyDiWL7KRLW16HrfxAT2bXpdoL5tpltuTU0'
 // Cadastre em: https://apify.com (tier gratuito generoso)
 // Instagram: ~2.100 posts/mês grátis
 // TikTok: ~16.600 posts/mês grátis
+// Twitter: ~500 tweets/mês grátis
 // ============================================
-const APIFY_TOKEN = '' // Preencher com sua chave Apify (grátis)
+const APIFY_TOKEN = 'apify_api_YE1jV1cLMLpUaJ4FpNd6mgYoftRpvc4kYJqL'
 
 // RapidAPI - Alternativa (tier gratuito mais limitado)
-const RAPIDAPI_KEY = '' // Preencher com sua chave RapidAPI
+const RAPIDAPI_KEY = '' // Preencher com sua chave RapidAPI (opcional)
 
 // ============================================
 // INTERFACES
@@ -140,71 +141,116 @@ export async function searchYouTube(query: string, maxResults = 10): Promise<Soc
 }
 
 // ============================================
-// TWITTER/X - Via RapidAPI (Twitter154 API)
-// Alternativa gratuita limitada
+// TWITTER/X - Via Apify (apidojo/tweet-scraper)
+// Grátis: ~500 tweets/mês
 // ============================================
 
 export async function searchTwitter(query: string, maxResults = 10): Promise<SocialSearchResult> {
-  // Se não tem RapidAPI key, usa dados simulados para demo
-  if (!RAPIDAPI_KEY) {
-    return generateMockTwitterData(query, maxResults)
-  }
+  // Tenta Apify primeiro (melhor opção, grátis)
+  if (APIFY_TOKEN) {
+    try {
+      console.log('🐦 Buscando Twitter via Apify...')
 
-  try {
-    const response = await fetch(
-      `https://twitter154.p.rapidapi.com/search/search?query=${encodeURIComponent(query)}&section=latest&limit=${maxResults}`,
-      {
-        headers: {
-          'X-RapidAPI-Key': RAPIDAPI_KEY,
-          'X-RapidAPI-Host': 'twitter154.p.rapidapi.com'
+      const response = await fetch(
+        `https://api.apify.com/v2/acts/apidojo~tweet-scraper/run-sync-get-dataset-items?token=${APIFY_TOKEN}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            searchTerms: [query],
+            maxTweets: maxResults,
+            sort: 'Latest',
+            tweetLanguage: 'pt'
+          })
         }
+      )
+
+      if (response.ok) {
+        const data = await response.json()
+
+        const posts: SocialPost[] = (data || []).slice(0, maxResults).map((tweet: any) => ({
+          id: tweet.id || tweet.id_str || String(Date.now()),
+          platform: 'twitter' as const,
+          author: tweet.author?.name || tweet.user?.name || 'Unknown',
+          authorHandle: tweet.author?.userName || tweet.user?.screen_name,
+          authorImage: tweet.author?.profilePicture || tweet.user?.profile_image_url_https,
+          content: tweet.text || tweet.full_text || '',
+          url: tweet.url || `https://twitter.com/i/status/${tweet.id}`,
+          publishedAt: tweet.createdAt || tweet.created_at || new Date().toISOString(),
+          views: tweet.viewCount || tweet.views || 0,
+          likes: tweet.likeCount || tweet.favorite_count || 0,
+          comments: tweet.replyCount || tweet.reply_count || 0,
+          shares: tweet.retweetCount || tweet.retweet_count || 0,
+          sentiment: analyzeSentiment(tweet.text || tweet.full_text || '') as any
+        }))
+
+        posts.sort((a, b) => ((b.views || 0) + (b.likes || 0)) - ((a.views || 0) + (a.likes || 0)))
+
+        console.log(`✅ Twitter: ${posts.length} tweets encontrados`)
+        return { platform: 'twitter', posts, totalResults: posts.length }
       }
-    )
-
-    if (!response.ok) {
-      throw new Error('Twitter API error')
+    } catch (error) {
+      console.error('Apify Twitter error:', error)
     }
-
-    const data = await response.json()
-
-    const posts: SocialPost[] = data.results?.map((tweet: any) => ({
-      id: tweet.tweet_id,
-      platform: 'twitter' as const,
-      author: tweet.user?.name || 'Unknown',
-      authorHandle: tweet.user?.username,
-      content: tweet.text,
-      url: `https://twitter.com/${tweet.user?.username}/status/${tweet.tweet_id}`,
-      publishedAt: tweet.creation_date,
-      views: tweet.views || 0,
-      likes: tweet.favorite_count || 0,
-      comments: tweet.reply_count || 0,
-      shares: tweet.retweet_count || 0,
-      sentiment: analyzeSentiment(tweet.text) as any
-    })) || []
-
-    posts.sort((a, b) => (b.views || 0) - (a.views || 0))
-
-    return {
-      platform: 'twitter',
-      posts,
-      totalResults: posts.length
-    }
-  } catch (error) {
-    console.error('Twitter search error:', error)
-    return generateMockTwitterData(query, maxResults)
   }
+
+  // Fallback para RapidAPI
+  if (RAPIDAPI_KEY) {
+    try {
+      const response = await fetch(
+        `https://twitter154.p.rapidapi.com/search/search?query=${encodeURIComponent(query)}&section=latest&limit=${maxResults}`,
+        {
+          headers: {
+            'X-RapidAPI-Key': RAPIDAPI_KEY,
+            'X-RapidAPI-Host': 'twitter154.p.rapidapi.com'
+          }
+        }
+      )
+
+      if (response.ok) {
+        const data = await response.json()
+
+        const posts: SocialPost[] = data.results?.map((tweet: any) => ({
+          id: tweet.tweet_id,
+          platform: 'twitter' as const,
+          author: tweet.user?.name || 'Unknown',
+          authorHandle: tweet.user?.username,
+          content: tweet.text,
+          url: `https://twitter.com/${tweet.user?.username}/status/${tweet.tweet_id}`,
+          publishedAt: tweet.creation_date,
+          views: tweet.views || 0,
+          likes: tweet.favorite_count || 0,
+          comments: tweet.reply_count || 0,
+          shares: tweet.retweet_count || 0,
+          sentiment: analyzeSentiment(tweet.text) as any
+        })) || []
+
+        posts.sort((a, b) => (b.views || 0) - (a.views || 0))
+        return { platform: 'twitter', posts, totalResults: posts.length }
+      }
+    } catch (error) {
+      console.error('RapidAPI Twitter error:', error)
+    }
+  }
+
+  // Fallback para dados mock
+  return generateMockTwitterData(query, maxResults)
 }
 
 // ============================================
 // INSTAGRAM - Via Apify (GRÁTIS $5/mês) ou RapidAPI
 // Apify: https://apify.com/apify/instagram-scraper
+// ~2.100 posts/mês GRÁTIS
 // ============================================
 
 export async function searchInstagram(query: string, maxResults = 10): Promise<SocialSearchResult> {
   // Tenta Apify primeiro (melhor opção, grátis)
   if (APIFY_TOKEN) {
     try {
-      const hashtag = query.replace(/\s+/g, '').toLowerCase()
+      console.log('📸 Buscando Instagram via Apify...')
+
+      // Remove espaços e caracteres especiais para hashtag
+      const hashtag = query.replace(/[^a-zA-Z0-9áéíóúãõâêîôûç]/gi, '').toLowerCase()
 
       // Apify Actor para Instagram hashtag search
       const response = await fetch(
@@ -223,22 +269,30 @@ export async function searchInstagram(query: string, maxResults = 10): Promise<S
       if (response.ok) {
         const data = await response.json()
         const posts: SocialPost[] = (data || []).slice(0, maxResults).map((post: any) => ({
-          id: post.id || post.shortCode,
+          id: post.id || post.shortCode || String(Date.now()),
           platform: 'instagram' as const,
-          author: post.ownerUsername || 'Unknown',
-          authorHandle: post.ownerUsername,
-          content: post.caption || '',
+          author: post.ownerUsername || post.owner?.username || 'Unknown',
+          authorHandle: post.ownerUsername || post.owner?.username,
+          authorImage: post.owner?.profilePicUrl,
+          content: post.caption || post.text || '',
           url: post.url || `https://instagram.com/p/${post.shortCode}`,
-          publishedAt: post.timestamp || new Date().toISOString(),
-          thumbnail: post.displayUrl,
-          likes: post.likesCount || 0,
-          comments: post.commentsCount || 0,
-          views: post.videoViewCount || 0,
-          sentiment: analyzeSentiment(post.caption || '') as any
+          publishedAt: post.timestamp || post.takenAtTimestamp
+            ? new Date(post.takenAtTimestamp * 1000).toISOString()
+            : new Date().toISOString(),
+          thumbnail: post.displayUrl || post.thumbnailUrl,
+          likes: post.likesCount || post.likeCount || 0,
+          comments: post.commentsCount || post.commentCount || 0,
+          views: post.videoViewCount || post.playCount || 0,
+          sentiment: analyzeSentiment(post.caption || post.text || '') as any
         }))
 
-        posts.sort((a, b) => (b.likes || 0) - (a.likes || 0))
+        posts.sort((a, b) => ((b.likes || 0) + (b.comments || 0)) - ((a.likes || 0) + (a.comments || 0)))
+
+        console.log(`✅ Instagram: ${posts.length} posts encontrados`)
         return { platform: 'instagram', posts, totalResults: posts.length }
+      } else {
+        const errorText = await response.text()
+        console.error('Instagram API response error:', errorText)
       }
     } catch (error) {
       console.error('Apify Instagram error:', error)
@@ -298,6 +352,8 @@ export async function searchTikTok(query: string, maxResults = 10): Promise<Soci
   // Tenta Apify primeiro (melhor opção, grátis)
   if (APIFY_TOKEN) {
     try {
+      console.log('🎵 Buscando TikTok via Apify...')
+
       const response = await fetch(
         `https://api.apify.com/v2/acts/clockworks~tiktok-scraper/run-sync-get-dataset-items?token=${APIFY_TOKEN}`,
         {
@@ -315,23 +371,31 @@ export async function searchTikTok(query: string, maxResults = 10): Promise<Soci
       if (response.ok) {
         const data = await response.json()
         const posts: SocialPost[] = (data || []).slice(0, maxResults).map((video: any) => ({
-          id: video.id || video.videoId,
+          id: video.id || video.videoId || String(Date.now()),
           platform: 'tiktok' as const,
-          author: video.authorMeta?.name || video.author || 'Unknown',
-          authorHandle: video.authorMeta?.nickName || video.authorMeta?.name,
-          content: video.text || video.desc || '',
-          url: video.webVideoUrl || `https://tiktok.com/@${video.authorMeta?.name}/video/${video.id}`,
-          publishedAt: video.createTimeISO || new Date().toISOString(),
-          thumbnail: video.videoMeta?.coverUrl || video.covers?.[0],
-          views: video.playCount || 0,
-          likes: video.diggCount || 0,
-          comments: video.commentCount || 0,
-          shares: video.shareCount || 0,
-          sentiment: analyzeSentiment(video.text || video.desc || '') as any
+          author: video.authorMeta?.name || video.author?.nickname || video.author || 'Unknown',
+          authorHandle: video.authorMeta?.nickName || video.authorMeta?.name || video.author?.uniqueId,
+          authorImage: video.authorMeta?.avatar || video.author?.avatarThumb,
+          content: video.text || video.desc || video.description || '',
+          url: video.webVideoUrl || video.videoUrl || `https://tiktok.com/@${video.authorMeta?.name || 'user'}/video/${video.id}`,
+          publishedAt: video.createTimeISO || video.createTime
+            ? new Date(video.createTime * 1000).toISOString()
+            : new Date().toISOString(),
+          thumbnail: video.videoMeta?.coverUrl || video.covers?.[0] || video.cover,
+          views: video.playCount || video.stats?.playCount || 0,
+          likes: video.diggCount || video.stats?.diggCount || 0,
+          comments: video.commentCount || video.stats?.commentCount || 0,
+          shares: video.shareCount || video.stats?.shareCount || 0,
+          sentiment: analyzeSentiment(video.text || video.desc || video.description || '') as any
         }))
 
         posts.sort((a, b) => (b.views || 0) - (a.views || 0))
+
+        console.log(`✅ TikTok: ${posts.length} vídeos encontrados`)
         return { platform: 'tiktok', posts, totalResults: posts.length }
+      } else {
+        const errorText = await response.text()
+        console.error('TikTok API response error:', errorText)
       }
     } catch (error) {
       console.error('Apify TikTok error:', error)
@@ -387,6 +451,9 @@ export async function searchTikTok(query: string, maxResults = 10): Promise<Soci
 
 export async function searchAllNetworks(query: string): Promise<Record<string, SocialSearchResult>> {
   console.log(`🔍 Buscando "${query}" em todas as redes...`)
+  console.log(`📌 Apify configurado: ${APIFY_TOKEN ? 'SIM ✅' : 'NÃO ❌'}`)
+
+  const startTime = Date.now()
 
   const results = await Promise.all([
     searchYouTube(query, 10),
@@ -395,12 +462,25 @@ export async function searchAllNetworks(query: string): Promise<Record<string, S
     searchTikTok(query, 10)
   ])
 
+  const elapsed = ((Date.now() - startTime) / 1000).toFixed(1)
+
+  console.log(`\n📊 RESUMO DA BUSCA (${elapsed}s):`)
+  console.log(`   YouTube:   ${results[0].totalResults} resultados ${results[0].error ? '⚠️' : '✅'}`)
+  console.log(`   Twitter:   ${results[1].totalResults} resultados ${results[1].error ? '⚠️' : '✅'}`)
+  console.log(`   Instagram: ${results[2].totalResults} resultados ${results[2].error ? '⚠️' : '✅'}`)
+  console.log(`   TikTok:    ${results[3].totalResults} resultados ${results[3].error ? '⚠️' : '✅'}`)
+
   return {
     youtube: results[0],
     twitter: results[1],
     instagram: results[2],
     tiktok: results[3]
   }
+}
+
+// Verifica se Apify está configurado
+export function isApifyConfigured(): boolean {
+  return !!APIFY_TOKEN
 }
 
 // ============================================
