@@ -253,8 +253,49 @@ export default function DashboardPro() {
   const fetchSocialNetworks = async (politician: Politician) => {
     setLoadingSocial(true)
     try {
-      const query = politician.nickname || politician.name
+      // Monta a query principal: nome ou apelido
+      let query = politician.nickname || politician.name
+
+      // Adiciona termos de busca personalizados (keywords sem prefixo "-")
+      const includeTerms = (politician.keywords || []).filter(k => !k.startsWith('-'))
+      if (includeTerms.length > 0) {
+        // Adiciona o primeiro termo de inclusão à query
+        query = `${query} OR ${includeTerms[0]}`
+      }
+
+      // Extrai termos de exclusão (keywords com prefixo "-")
+      const excludeTerms = (politician.keywords || [])
+        .filter(k => k.startsWith('-'))
+        .map(k => k.substring(1).toLowerCase())
+
+      console.log(`🔍 Buscando: "${query}"`)
+      if (excludeTerms.length > 0) {
+        console.log(`❌ Excluindo termos: ${excludeTerms.join(', ')}`)
+      }
+
       const results = await searchAllNetworks(query)
+
+      // Aplica filtros de exclusão nos resultados
+      if (excludeTerms.length > 0) {
+        Object.keys(results).forEach(key => {
+          if (results[key]?.posts) {
+            const originalCount = results[key].posts.length
+            results[key].posts = results[key].posts.filter(post => {
+              const content = (post.content || '').toLowerCase()
+              const author = (post.author || '').toLowerCase()
+              // Exclui posts que contenham termos de exclusão
+              return !excludeTerms.some(term =>
+                content.includes(term) || author.includes(term)
+              )
+            })
+            const filteredCount = originalCount - results[key].posts.length
+            if (filteredCount > 0) {
+              console.log(`✂️ ${key}: ${filteredCount} posts filtrados por termos de exclusão`)
+            }
+          }
+        })
+      }
+
       setSocialResults(results)
     } catch (error) {
       console.error('Erro ao buscar redes sociais:', error)
@@ -651,6 +692,18 @@ export default function DashboardPro() {
           </div>
         </div>
 
+        {/* Análise de IA - Logo após o Score/Gráfico */}
+        <div className="mb-6">
+          <InsightsSection
+            summary={insights.summary}
+            recommendations={insights.recommendations}
+            risks={aiAnalysis?.risks}
+            opportunities={aiAnalysis?.opportunities}
+            isLoading={loadingMentions || loadingAI}
+            isAIGenerated={!!aiAnalysis}
+          />
+        </div>
+
         {/* Cards das Redes Sociais */}
         <div className="mb-6">
           <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
@@ -680,16 +733,6 @@ export default function DashboardPro() {
             </div>
           )}
         </div>
-
-        {/* Insights da IA */}
-        <InsightsSection
-          summary={insights.summary}
-          recommendations={insights.recommendations}
-          risks={aiAnalysis?.risks}
-          opportunities={aiAnalysis?.opportunities}
-          isLoading={loadingMentions || loadingAI}
-          isAIGenerated={!!aiAnalysis}
-        />
 
         {/* Menções Recentes */}
         <div className="mt-6">

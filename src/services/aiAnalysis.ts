@@ -94,69 +94,70 @@ export interface DailyReportData {
 }
 
 // ============================================
-// PROMPT PRINCIPAL DE ANÁLISE
+// PROMPT PRINCIPAL DE ANÁLISE (Estilo Profissional)
 // ============================================
 
-const ANALYSIS_PROMPT = `Você é um analista político especializado em monitoramento de reputação e gestão de imagem. Sua função é analisar menções na mídia e redes sociais sobre um político e gerar um relatório executivo.
+const ANALYSIS_PROMPT = `Você é um analista de MONITORAMENTO DE MÍDIA político, NÃO um analista político partidário.
 
-INSTRUÇÕES:
-1. Analise TODAS as menções fornecidas de forma objetiva
-2. Identifique o sentimento predominante (positivo, negativo, neutro ou misto)
-3. Detecte possíveis crises ou situações que requerem atenção
-4. Identifique os principais temas sendo discutidos
-5. Gere recomendações práticas e acionáveis
-6. Seja direto e objetivo - este relatório será lido por assessores ocupados
+⚠️ REGRAS DE IMPARCIALIDADE OBRIGATÓRIAS:
+1. Você NÃO tem opinião política. Analisa FATOS e TOM da cobertura.
+2. Avalie o IMPACTO NA IMAGEM do político, não se a pauta é "boa" ou "ruim" ideologicamente.
+3. Crítica ao político = NEGATIVO, independente de quem critica.
+4. Elogio ao político = POSITIVO, independente de quem elogia.
+5. Notícia factual sem tom = NEUTRO.
+6. Trate políticos de TODOS os partidos com os MESMOS critérios.
 
-FORMATO DE RESPOSTA (JSON):
+CRITÉRIOS DE SCORE (0-10):
+- 10 = Cobertura muito favorável (elogios explícitos, conquista destacada)
+- 7.5 = Cobertura favorável (tom positivo, ação bem-sucedida)
+- 5 = Cobertura neutra (factual, informativo)
+- 2.5 = Cobertura desfavorável (críticas, problemas)
+- 0 = Cobertura muito desfavorável (escândalo, denúncia grave)
+
+FÓRMULA DO SCORE GERAL PONDERADO:
+(Mídia × 0.30) + (Twitter × 0.20) + (Instagram × 0.15) + (YouTube × 0.15) + (TikTok × 0.15) + (Telegram × 0.05)
+
+CRITÉRIOS DE ALERTA DE CRISE:
+- VERDE: Nenhum conteúdo com score 0 ou 2.5, score geral >= 5
+- AMARELO: 1-2 conteúdos negativos OU score entre 3.5 e 4.9
+- VERMELHO: Conteúdo viral negativo OU score < 3.5
+
+TASKS:
+1. **SUMÁRIO EXECUTIVO (12-18 frases)** cobrindo:
+   - Visão geral: como foi o dia? (2-3 frases)
+   - Mídia tradicional: principais notícias e tom (2-3 frases)
+   - Redes sociais: o que viralizou, qual rede se destacou (3-4 frases)
+   - Pontos de atenção: críticas, polêmicas, riscos (2-3 frases)
+   - Oportunidades: pautas positivas, momentos para capitalizar (2-3 frases)
+   - Conclusão: recomendação principal (1-2 frases)
+
+2. **ANÁLISE POR REDE** - Para cada fonte:
+   - Score de 0 a 10 (média do tom das publicações)
+   - Resumo de 2-3 frases
+   - Top 3 destaques com métricas
+
+3. **RECOMENDAÇÕES**: 3 ações práticas para a assessoria de imprensa
+
+FORMATO DE RESPOSTA (JSON estrito):
 {
-  "summary": "Resumo executivo em 2-3 frases sobre o dia do político na mídia",
+  "summary": "string (sumário executivo de 12-18 frases em um único parágrafo)",
   "overallSentiment": "positivo|negativo|neutro|misto",
-  "sentimentScore": 1-10,
+  "sentimentScore": number (0-10, usando a fórmula ponderada),
   "alertLevel": "verde|amarelo|vermelho",
-  "alertReason": "Motivo do nível de alerta",
+  "alertReason": "string (motivo do nível de alerta)",
   "topNews": [
-    {
-      "title": "Título da notícia",
-      "source": "Fonte",
-      "sentiment": "positivo|negativo|neutro",
-      "relevance": "Por que é relevante",
-      "url": "URL"
-    }
+    {"title": "string", "source": "string", "sentiment": "positivo|negativo|neutro", "relevance": "string", "url": "string"}
   ],
-  "mainTopics": ["tema1", "tema2"],
-  "recommendations": [
-    "Recomendação 1 específica e acionável",
-    "Recomendação 2"
-  ],
+  "mainTopics": ["string"],
+  "recommendations": ["string (ação específica e acionável)"],
   "networkScores": [
-    {
-      "network": "Nome da rede",
-      "score": 1-100,
-      "trend": "subindo|descendo|estavel",
-      "insight": "Observação sobre esta rede"
-    }
+    {"network": "string", "score": number (0-10), "trend": "subindo|descendo|estavel", "insight": "string (2-3 frases de análise)"}
   ],
   "risks": [
-    {
-      "description": "Descrição do risco",
-      "severity": "baixo|medio|alto",
-      "action": "Ação recomendada"
-    }
+    {"description": "string", "severity": "baixo|medio|alto", "action": "string (ação recomendada)"}
   ],
-  "opportunities": ["Oportunidade 1", "Oportunidade 2"]
-}
-
-CRITÉRIOS DE ALERTA:
-- VERDE: Dia tranquilo, maioria das menções neutras ou positivas
-- AMARELO: Há menções negativas que merecem atenção, mas não é crise
-- VERMELHO: Crise em andamento, muitas menções negativas, assunto viral
-
-CRITÉRIOS DE SCORE (1-10):
-- 9-10: Excelente, dia muito positivo
-- 7-8: Bom, mais positivo que negativo
-- 5-6: Neutro, equilibrado
-- 3-4: Negativo, mais críticas que elogios
-- 1-2: Crítico, crise de imagem`
+  "opportunities": ["string"]
+}`
 
 // ============================================
 // FUNÇÃO PRINCIPAL DE ANÁLISE
@@ -214,49 +215,127 @@ export async function analyzeWithAI(data: DailyReportData): Promise<AIAnalysisRe
 }
 
 // ============================================
-// FORMATA DADOS PARA ENVIAR À IA
+// FORMATA DADOS PARA ENVIAR À IA (Formato Profissional)
 // ============================================
 
 function formatDataForAI(data: DailyReportData): string {
-  let message = `RELATÓRIO DE MONITORAMENTO - ${data.date}\n\n`
-  message += `POLÍTICO: ${data.politicianName}\n`
-  if (data.party) message += `PARTIDO: ${data.party}\n`
-  if (data.position) message += `CARGO: ${data.position}\n`
-  message += '\n'
+  // Agrupa menções por fonte
+  const midiaMencoes = data.mentions.filter(m => m.platform === 'midia' || m.platform === 'news')
+  const youtubeMencoes = data.mentions.filter(m => m.platform === 'youtube')
 
-  // Menções na mídia
-  message += `=== MENÇÕES NA MÍDIA (${data.mentions.length} total) ===\n\n`
-
-  data.mentions.slice(0, 20).forEach((mention, i) => {
-    message += `${i + 1}. [${mention.platform.toUpperCase()}] ${mention.title}\n`
-    message += `   Fonte: ${mention.source}\n`
-    message += `   Data: ${mention.publishedAt}\n`
-    if (mention.content) {
-      message += `   Resumo: ${mention.content.substring(0, 200)}...\n`
-    }
-    message += `   URL: ${mention.url}\n\n`
+  // Calcula estatísticas por rede
+  const calcStats = (network: NetworkData | undefined) => ({
+    quantidade: network?.mentions || 0,
+    engajamento_total: network?.topPosts?.reduce((sum, p) => sum + (p.engagement || 0), 0) || 0,
+    positivas: network?.positive || 0,
+    negativas: network?.negative || 0,
+    neutras: network?.neutral || 0
   })
 
-  // Dados das redes sociais
-  message += `\n=== REDES SOCIAIS ===\n\n`
+  const twitterData = data.networks.find(n => n.network.toLowerCase().includes('twitter'))
+  const instagramData = data.networks.find(n => n.network.toLowerCase().includes('instagram'))
+  const youtubeData = data.networks.find(n => n.network.toLowerCase().includes('youtube'))
+  const tiktokData = data.networks.find(n => n.network.toLowerCase().includes('tiktok'))
 
-  data.networks.forEach(network => {
-    message += `${network.network.toUpperCase()}:\n`
-    message += `- Total de menções: ${network.mentions}\n`
-    message += `- Positivas: ${network.positive}\n`
-    message += `- Negativas: ${network.negative}\n`
-    message += `- Neutras: ${network.neutral}\n`
+  const stats = {
+    midia: { quantidade: midiaMencoes.length, engajamento_total: 0 },
+    twitter: calcStats(twitterData),
+    instagram: calcStats(instagramData),
+    youtube: calcStats(youtubeData),
+    tiktok: calcStats(tiktokData)
+  }
 
-    if (network.topPosts.length > 0) {
-      message += `- Top posts:\n`
-      network.topPosts.slice(0, 3).forEach((post, i) => {
-        message += `  ${i + 1}. "${post.content.substring(0, 100)}..." - @${post.author} (${post.engagement} engajamento)\n`
-      })
-    }
-    message += '\n'
-  })
+  let message = `Analise a cobertura do político ${data.politicianName}`
+  if (data.party) message += ` (${data.party})`
+  if (data.position) message += ` - ${data.position}`
+  message += ` nas últimas 24 horas.\n\n`
 
-  message += `\nAnalise os dados acima e gere o relatório no formato JSON especificado.`
+  message += `📅 Data: ${data.date}\n\n`
+  message += `═══════════════════════════════════════\n`
+  message += `DADOS POR FONTE:\n`
+  message += `═══════════════════════════════════════\n\n`
+
+  // Mídia Tradicional
+  message += `📰 MÍDIA TRADICIONAL (${stats.midia.quantidade} itens):\n`
+  if (midiaMencoes.length > 0) {
+    message += JSON.stringify(midiaMencoes.slice(0, 15).map(m => ({
+      titulo: m.title,
+      fonte: m.source,
+      url: m.url,
+      data: m.publishedAt
+    })), null, 2) + '\n\n'
+  } else {
+    message += 'Nenhuma menção encontrada\n\n'
+  }
+
+  // Twitter/X
+  message += `🐦 X/TWITTER (${stats.twitter.quantidade} itens, ${stats.twitter.engajamento_total} engajamento):\n`
+  if (twitterData?.topPosts?.length) {
+    message += JSON.stringify(twitterData.topPosts.slice(0, 10).map(p => ({
+      texto: p.content?.substring(0, 200),
+      autor: p.author,
+      engajamento: p.engagement,
+      url: p.url
+    })), null, 2) + '\n\n'
+  } else {
+    message += 'Nenhuma menção encontrada\n\n'
+  }
+
+  // Instagram
+  message += `📸 INSTAGRAM (${stats.instagram.quantidade} itens, ${stats.instagram.engajamento_total} engajamento):\n`
+  if (instagramData?.topPosts?.length) {
+    message += JSON.stringify(instagramData.topPosts.slice(0, 10).map(p => ({
+      texto: p.content?.substring(0, 150),
+      autor: p.author,
+      engajamento: p.engagement,
+      url: p.url
+    })), null, 2) + '\n\n'
+  } else {
+    message += 'Nenhuma menção encontrada\n\n'
+  }
+
+  // YouTube
+  message += `🎬 YOUTUBE (${stats.youtube.quantidade} itens, ${stats.youtube.engajamento_total} engajamento):\n`
+  if (youtubeData?.topPosts?.length) {
+    message += JSON.stringify(youtubeData.topPosts.slice(0, 10).map(p => ({
+      titulo: p.content,
+      canal: p.author,
+      engajamento: p.engagement,
+      url: p.url
+    })), null, 2) + '\n\n'
+  } else if (youtubeMencoes.length > 0) {
+    message += JSON.stringify(youtubeMencoes.slice(0, 10).map(m => ({
+      titulo: m.title,
+      canal: m.source,
+      url: m.url
+    })), null, 2) + '\n\n'
+  } else {
+    message += 'Nenhuma menção encontrada\n\n'
+  }
+
+  // TikTok
+  message += `📱 TIKTOK (${stats.tiktok.quantidade} itens, ${stats.tiktok.engajamento_total} engajamento):\n`
+  if (tiktokData?.topPosts?.length) {
+    message += JSON.stringify(tiktokData.topPosts.slice(0, 10).map(p => ({
+      texto: p.content?.substring(0, 150),
+      autor: p.author,
+      engajamento: p.engagement,
+      url: p.url
+    })), null, 2) + '\n\n'
+  } else {
+    message += 'Nenhuma menção encontrada\n\n'
+  }
+
+  message += `═══════════════════════════════════════\n`
+  message += `ESTATÍSTICAS RESUMIDAS:\n`
+  message += `═══════════════════════════════════════\n`
+  message += `- Mídia: ${stats.midia.quantidade} itens\n`
+  message += `- Twitter: ${stats.twitter.quantidade} itens (${stats.twitter.engajamento_total} engajamento)\n`
+  message += `- Instagram: ${stats.instagram.quantidade} itens (${stats.instagram.engajamento_total} engajamento)\n`
+  message += `- YouTube: ${stats.youtube.quantidade} itens (${stats.youtube.engajamento_total} engajamento)\n`
+  message += `- TikTok: ${stats.tiktok.quantidade} itens (${stats.tiktok.engajamento_total} engajamento)\n\n`
+
+  message += `Gere o relatório completo no formato JSON especificado, seguindo TODAS as regras de imparcialidade.`
 
   return message
 }

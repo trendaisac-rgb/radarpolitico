@@ -144,27 +144,25 @@ export async function searchYouTube(query: string, maxResults = 10): Promise<Soc
 }
 
 // ============================================
-// TWITTER/X - Via Apify (apidojo/tweet-scraper)
-// Docs: https://apify.com/apidojo/tweet-scraper/input-schema
+// TWITTER/X - Via Apify (scraper_one/x-posts-search)
+// ID do actor: rBaTEHzveTxZPraGv
 // ============================================
 
 export async function searchTwitter(query: string, maxResults = 10): Promise<SocialSearchResult> {
   // Tenta Apify primeiro
   if (APIFY_TOKEN) {
     try {
-      console.log('🐦 Buscando Twitter via Apify (apidojo/tweet-scraper)...')
+      console.log('🐦 Buscando Twitter via Apify (scraper_one/x-posts-search)...')
 
-      // Parâmetros conforme documentação oficial:
-      // https://apify.com/apidojo/tweet-scraper/input-schema
+      // Usando o mesmo actor do n8n que funcionava
       const response = await fetch(
-        `https://api.apify.com/v2/acts/apidojo~tweet-scraper/run-sync-get-dataset-items?token=${APIFY_TOKEN}`,
+        `https://api.apify.com/v2/acts/rBaTEHzveTxZPraGv/run-sync-get-dataset-items?token=${APIFY_TOKEN}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            searchTerms: [query],
-            maxItems: maxResults * 2,
-            sort: 'Latest'
+            query: query,
+            maxItems: maxResults * 2
           })
         }
       )
@@ -258,28 +256,28 @@ export async function searchTwitter(query: string, maxResults = 10): Promise<Soc
 }
 
 // ============================================
-// INSTAGRAM - Via Apify (apify/instagram-hashtag-scraper)
-// Docs: https://apify.com/apify/instagram-hashtag-scraper
+// INSTAGRAM - Via Apify (apify/instagram-scraper)
+// Actor oficial: apify/instagram-scraper
 // ============================================
 
 export async function searchInstagram(query: string, maxResults = 10): Promise<SocialSearchResult> {
   // Tenta Apify primeiro
   if (APIFY_TOKEN) {
     try {
-      console.log('📸 Buscando Instagram via Apify (apify/instagram-hashtag-scraper)...')
+      console.log('📸 Buscando Instagram via Apify (apify/instagram-scraper)...')
 
       // Remove espaços e caracteres especiais para hashtag
       const hashtag = query.replace(/[^a-zA-Z0-9]/gi, '').toLowerCase()
 
-      // Parâmetros conforme documentação oficial:
-      // https://apify.com/apify/instagram-hashtag-scraper
+      // Usando o actor oficial apify/instagram-scraper
       const response = await fetch(
-        `https://api.apify.com/v2/acts/apify~instagram-hashtag-scraper/run-sync-get-dataset-items?token=${APIFY_TOKEN}`,
+        `https://api.apify.com/v2/acts/apify~instagram-scraper/run-sync-get-dataset-items?token=${APIFY_TOKEN}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            hashtags: [hashtag],
+            search: hashtag,
+            searchType: 'hashtag',
             resultsLimit: maxResults * 2
           })
         }
@@ -383,25 +381,36 @@ export async function searchInstagram(query: string, maxResults = 10): Promise<S
 }
 
 // ============================================
-// TIKTOK - Via Apify (clockworks/free-tiktok-scraper)
-// https://apify.com/clockworks/free-tiktok-scraper
+// TIKTOK - Via Apify (clockworks/tiktok-scraper)
+// ID do actor: GdWCkxBtKWOsKjdch (mesmo do n8n)
 // ============================================
 
 export async function searchTikTok(query: string, maxResults = 10): Promise<SocialSearchResult> {
   // Tenta Apify primeiro
   if (APIFY_TOKEN) {
     try {
-      console.log('🎵 Buscando TikTok via Apify (clockworks/free-tiktok-scraper)...')
+      console.log('🎵 Buscando TikTok via Apify (clockworks/tiktok-scraper)...')
 
-      // Usando o actor gratuito do clockworks
+      // Usando o mesmo actor do n8n que funcionava (GdWCkxBtKWOsKjdch)
+      const hashtag = query.replace(/[^a-zA-Z0-9]/gi, '').toLowerCase()
       const response = await fetch(
-        `https://api.apify.com/v2/acts/clockworks~free-tiktok-scraper/run-sync-get-dataset-items?token=${APIFY_TOKEN}`,
+        `https://api.apify.com/v2/acts/GdWCkxBtKWOsKjdch/run-sync-get-dataset-items?token=${APIFY_TOKEN}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            hashtags: [query.replace(/[^a-zA-Z0-9]/gi, '')],
-            resultsPerPage: maxResults * 2
+            excludePinnedPosts: false,
+            hashtags: [hashtag],
+            proxyCountryCode: 'BR',
+            resultsPerPage: maxResults * 2,
+            scrapeRelatedVideos: false,
+            searchDatePosted: '1',
+            shouldDownloadAvatars: false,
+            shouldDownloadCovers: false,
+            shouldDownloadMusicCovers: false,
+            shouldDownloadSlideshowImages: false,
+            shouldDownloadSubtitles: false,
+            shouldDownloadVideos: false
           })
         }
       )

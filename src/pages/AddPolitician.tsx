@@ -9,8 +9,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { ArrowLeft, UserPlus, Loader2 } from 'lucide-react'
+import { ArrowLeft, UserPlus, Loader2, Search, Ban, Info } from 'lucide-react'
 import { supabase, type PoliticianInsert } from '@/integrations/supabase/client'
 import { toast } from 'sonner'
 
@@ -51,7 +52,9 @@ export default function AddPolitician() {
     state: '',
     city: '',
     whatsapp: '',
-    email: ''
+    email: '',
+    searchTerms: '', // Termos de busca (separados por vírgula)
+    excludeTerms: '' // Termos de exclusão (separados por vírgula)
   })
 
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -77,6 +80,21 @@ export default function AddPolitician() {
         return
       }
 
+      // Processa termos de busca e exclusão
+      // Termos normais são incluídos, termos com prefixo "-" são exclusões
+      const parseTerms = (text: string): string[] => {
+        if (!text.trim()) return []
+        return text.split(',')
+          .map(t => t.trim())
+          .filter(t => t.length > 0)
+      }
+
+      const searchTerms = parseTerms(formData.searchTerms)
+      const excludeTerms = parseTerms(formData.excludeTerms).map(t => `-${t}`) // Prefixo - para exclusão
+
+      // Combina ambos os arrays no campo keywords
+      const allKeywords = [...searchTerms, ...excludeTerms]
+
       const newPolitician: PoliticianInsert = {
         user_id: userId,
         name: formData.name.trim(),
@@ -87,6 +105,7 @@ export default function AddPolitician() {
         city: formData.city.trim() || null,
         whatsapp: formData.whatsapp.trim() || null,
         email: formData.email.trim() || null,
+        keywords: allKeywords.length > 0 ? allKeywords : null,
         is_active: true,
         notify_whatsapp: true,
         notify_email: true
@@ -195,6 +214,60 @@ export default function AddPolitician() {
                     value={formData.city}
                     onChange={(e) => handleChange('city', e.target.value)}
                   />
+                </div>
+              </div>
+
+              {/* Termos de Monitoramento - IMPORTANTE para precisão */}
+              <div className="border-t pt-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <Search className="h-5 w-5 text-primary" />
+                  <h3 className="font-medium">Termos de Monitoramento</h3>
+                </div>
+
+                <div className="bg-blue-50 dark:bg-blue-950/30 p-4 rounded-lg mb-4">
+                  <div className="flex items-start gap-2">
+                    <Info className="h-4 w-4 text-blue-500 mt-0.5 shrink-0" />
+                    <p className="text-sm text-blue-700 dark:text-blue-300">
+                      Configure termos personalizados para melhorar a precisão do monitoramento.
+                      Por padrão, buscamos pelo nome e apelido cadastrados.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="searchTerms" className="flex items-center gap-2">
+                      <Search className="h-4 w-4 text-green-500" />
+                      Termos Adicionais de Busca
+                    </Label>
+                    <Textarea
+                      id="searchTerms"
+                      placeholder="Ex: Bolsominion, Mito, Capitão (separados por vírgula)"
+                      value={formData.searchTerms}
+                      onChange={(e) => handleChange('searchTerms', e.target.value)}
+                      className="min-h-[80px]"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Apelidos, hashtags ou variações do nome que devem ser incluídos na busca
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="excludeTerms" className="flex items-center gap-2">
+                      <Ban className="h-4 w-4 text-red-500" />
+                      Termos de Exclusão
+                    </Label>
+                    <Textarea
+                      id="excludeTerms"
+                      placeholder="Ex: futebol, novela, BBB, show, jogador (separados por vírgula)"
+                      value={formData.excludeTerms}
+                      onChange={(e) => handleChange('excludeTerms', e.target.value)}
+                      className="min-h-[80px]"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Termos que indicam conteúdo irrelevante (homônimos, esportes, entretenimento)
+                    </p>
+                  </div>
                 </div>
               </div>
 
