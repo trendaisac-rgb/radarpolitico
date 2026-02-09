@@ -170,22 +170,31 @@ export async function searchTwitter(query: string, maxResults = 10): Promise<Soc
 
       if (response.ok) {
         const data = await response.json()
+        console.log('Twitter raw data:', data?.slice(0, 2)) // Debug
 
-        const posts: SocialPost[] = (data || []).slice(0, maxResults).map((tweet: any) => ({
-          id: tweet.id || tweet.id_str || String(Date.now()),
-          platform: 'twitter' as const,
-          author: tweet.author?.name || tweet.user?.name || 'Unknown',
-          authorHandle: tweet.author?.userName || tweet.user?.screen_name,
-          authorImage: tweet.author?.profilePicture || tweet.user?.profile_image_url_https,
-          content: tweet.text || tweet.full_text || '',
-          url: tweet.url || `https://twitter.com/i/status/${tweet.id}`,
-          publishedAt: tweet.createdAt || tweet.created_at || new Date().toISOString(),
-          views: tweet.viewCount || tweet.views || 0,
-          likes: tweet.likeCount || tweet.favorite_count || 0,
-          comments: tweet.replyCount || tweet.reply_count || 0,
-          shares: tweet.retweetCount || tweet.retweet_count || 0,
-          sentiment: analyzeSentiment(tweet.text || tweet.full_text || '') as any
-        }))
+        const posts: SocialPost[] = (data || []).slice(0, maxResults).map((tweet: any) => {
+          // O actor apidojo/tweet-scraper usa estrutura específica
+          const authorName = tweet.author?.name || tweet.user?.name || tweet.user_name || tweet.name || 'Desconhecido'
+          const authorHandle = tweet.author?.userName || tweet.author?.username || tweet.user?.screen_name || tweet.screen_name || ''
+          const tweetText = tweet.text || tweet.full_text || tweet.tweet_text || tweet.content || ''
+          const tweetId = tweet.id || tweet.id_str || tweet.tweet_id || String(Date.now())
+
+          return {
+            id: tweetId,
+            platform: 'twitter' as const,
+            author: authorName,
+            authorHandle: authorHandle,
+            authorImage: tweet.author?.profilePicture || tweet.author?.avatar || tweet.user?.profile_image_url_https,
+            content: tweetText,
+            url: tweet.url || tweet.tweet_url || `https://twitter.com/${authorHandle}/status/${tweetId}`,
+            publishedAt: tweet.createdAt || tweet.created_at || tweet.date || new Date().toISOString(),
+            views: tweet.viewCount || tweet.views || tweet.view_count || 0,
+            likes: tweet.likeCount || tweet.favorite_count || tweet.likes || 0,
+            comments: tweet.replyCount || tweet.reply_count || tweet.replies || 0,
+            shares: tweet.retweetCount || tweet.retweet_count || tweet.retweets || 0,
+            sentiment: analyzeSentiment(tweetText) as any
+          }
+        })
 
         // Ordena por engajamento (views + likes + retweets) e pega TOP 5
         posts.sort((a, b) => {
@@ -247,66 +256,78 @@ export async function searchTwitter(query: string, maxResults = 10): Promise<Soc
 }
 
 // ============================================
-// INSTAGRAM - Via Apify (apify/instagram-hashtag-scraper)
-// https://apify.com/apify/instagram-scraper
+// INSTAGRAM - Via Apify (apify/instagram-post-scraper)
+// https://apify.com/apify/instagram-post-scraper
 // ============================================
 
 export async function searchInstagram(query: string, maxResults = 10): Promise<SocialSearchResult> {
   // Tenta Apify primeiro
   if (APIFY_TOKEN) {
     try {
-      console.log('📸 Buscando Instagram via Apify (apify/instagram-scraper)...')
+      console.log('📸 Buscando Instagram via Apify (apify/instagram-post-scraper)...')
 
       // Remove espaços e caracteres especiais para hashtag
       const hashtag = query.replace(/[^a-zA-Z0-9]/gi, '').toLowerCase()
 
-      // Apify Actor para Instagram - usando apify/instagram-scraper com hashtag
+      // Usando apify/instagram-post-scraper que é mais confiável
       const response = await fetch(
-        `https://api.apify.com/v2/acts/apify~instagram-scraper/run-sync-get-dataset-items?token=${APIFY_TOKEN}`,
+        `https://api.apify.com/v2/acts/apify~instagram-post-scraper/run-sync-get-dataset-items?token=${APIFY_TOKEN}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            directUrls: [`https://www.instagram.com/explore/tags/${hashtag}/`],
-            resultsLimit: maxResults * 2,
-            resultsType: 'posts'
+            hashtags: [hashtag],
+            resultsLimit: maxResults * 2
           })
         }
       )
 
       if (response.ok) {
         const data = await response.json()
-        const posts: SocialPost[] = (data || []).slice(0, maxResults).map((post: any) => ({
-          id: post.id || post.shortCode || String(Date.now()),
-          platform: 'instagram' as const,
-          author: post.ownerUsername || post.owner?.username || 'Unknown',
-          authorHandle: post.ownerUsername || post.owner?.username,
-          authorImage: post.owner?.profilePicUrl,
-          content: post.caption || post.text || '',
-          url: post.url || `https://instagram.com/p/${post.shortCode}`,
-          publishedAt: post.timestamp || post.takenAtTimestamp
-            ? new Date(post.takenAtTimestamp * 1000).toISOString()
-            : new Date().toISOString(),
-          thumbnail: post.displayUrl || post.thumbnailUrl,
-          likes: post.likesCount || post.likeCount || 0,
-          comments: post.commentsCount || post.commentCount || 0,
-          views: post.videoViewCount || post.playCount || 0,
-          sentiment: analyzeSentiment(post.caption || post.text || '') as any
-        }))
+        console.log('Instagram raw data:', data?.slice(0, 2)) // Debug
 
-        // Ordena por engajamento (likes + comments + views) e pega TOP 5
-        posts.sort((a, b) => {
-          const engA = (a.likes || 0) * 10 + (a.comments || 0) * 20 + (a.views || 0)
-          const engB = (b.likes || 0) * 10 + (b.comments || 0) * 20 + (b.views || 0)
-          return engB - engA
-        })
-        const top5 = posts.slice(0, 5)
+        if (data && data.length > 0) {
+          const posts: SocialPost[] = (data || []).slice(0, maxResults).map((post: any) => {
+            const shortCode = post.shortCode || post.code || post.id
+            const username = post.ownerUsername || post.owner?.username || post.username || 'Desconhecido'
 
-        console.log(`✅ Instagram: ${posts.length} posts encontrados, retornando TOP 5 por engajamento`)
-        return { platform: 'instagram', posts: top5, totalResults: posts.length }
+            return {
+              id: post.id || shortCode || String(Date.now()),
+              platform: 'instagram' as const,
+              author: username,
+              authorHandle: username,
+              authorImage: post.owner?.profilePicUrl || post.profilePicUrl,
+              content: post.caption || post.text || post.description || '',
+              url: post.url || post.postUrl || `https://instagram.com/p/${shortCode}`,
+              publishedAt: post.timestamp
+                ? new Date(post.timestamp * 1000).toISOString()
+                : post.takenAtTimestamp
+                  ? new Date(post.takenAtTimestamp * 1000).toISOString()
+                  : new Date().toISOString(),
+              thumbnail: post.displayUrl || post.thumbnailUrl || post.imageUrl,
+              likes: post.likesCount || post.likeCount || post.likes || 0,
+              comments: post.commentsCount || post.commentCount || post.comments || 0,
+              views: post.videoViewCount || post.playCount || post.views || 0,
+              sentiment: analyzeSentiment(post.caption || post.text || '') as any
+            }
+          })
+
+          // Ordena por engajamento (likes + comments + views) e pega TOP 5
+          posts.sort((a, b) => {
+            const engA = (a.likes || 0) * 10 + (a.comments || 0) * 20 + (a.views || 0)
+            const engB = (b.likes || 0) * 10 + (b.comments || 0) * 20 + (b.views || 0)
+            return engB - engA
+          })
+          const top5 = posts.slice(0, 5)
+
+          console.log(`✅ Instagram: ${posts.length} posts encontrados, retornando TOP 5 por engajamento`)
+          return { platform: 'instagram', posts: top5, totalResults: posts.length }
+        } else {
+          console.log('Instagram: Nenhum dado retornado pelo Apify')
+        }
       } else {
         const errorText = await response.text()
-        console.error('Instagram API response error:', errorText)
+        console.error('Instagram API response error:', response.status, errorText)
       }
     } catch (error) {
       console.error('Apify Instagram error:', error)
