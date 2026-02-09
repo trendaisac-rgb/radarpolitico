@@ -145,7 +145,7 @@ export async function searchYouTube(query: string, maxResults = 10): Promise<Soc
 
 // ============================================
 // TWITTER/X - Via Apify (apidojo/tweet-scraper)
-// https://apify.com/apidojo/tweet-scraper
+// Docs: https://apify.com/apidojo/tweet-scraper/input-schema
 // ============================================
 
 export async function searchTwitter(query: string, maxResults = 10): Promise<SocialSearchResult> {
@@ -154,7 +154,8 @@ export async function searchTwitter(query: string, maxResults = 10): Promise<Soc
     try {
       console.log('🐦 Buscando Twitter via Apify (apidojo/tweet-scraper)...')
 
-      // Usando o actor apidojo/tweet-scraper (o mais popular)
+      // Parâmetros conforme documentação oficial:
+      // https://apify.com/apidojo/tweet-scraper/input-schema
       const response = await fetch(
         `https://api.apify.com/v2/acts/apidojo~tweet-scraper/run-sync-get-dataset-items?token=${APIFY_TOKEN}`,
         {
@@ -162,36 +163,37 @@ export async function searchTwitter(query: string, maxResults = 10): Promise<Soc
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             searchTerms: [query],
-            maxTweets: maxResults * 2,
-            searchMode: 'live'
+            maxItems: maxResults * 2,
+            sort: 'Latest'
           })
         }
       )
 
       if (response.ok) {
         const data = await response.json()
-        console.log('Twitter raw data:', data?.slice(0, 2)) // Debug
+        console.log('Twitter raw data (primeiro item):', JSON.stringify(data?.[0], null, 2)) // Debug
 
         const posts: SocialPost[] = (data || []).slice(0, maxResults).map((tweet: any) => {
-          // O actor apidojo/tweet-scraper usa estrutura específica
-          const authorName = tweet.author?.name || tweet.user?.name || tweet.user_name || tweet.name || 'Desconhecido'
-          const authorHandle = tweet.author?.userName || tweet.author?.username || tweet.user?.screen_name || tweet.screen_name || ''
-          const tweetText = tweet.text || tweet.full_text || tweet.tweet_text || tweet.content || ''
-          const tweetId = tweet.id || tweet.id_str || tweet.tweet_id || String(Date.now())
+          // Campos conforme documentação apidojo/tweet-scraper:
+          // id, text, createdAt, author.name, author.userName, likeCount, retweetCount, replyCount, viewCount, url
+          const authorName = tweet.author?.name || tweet.authorName || 'Twitter User'
+          const authorHandle = tweet.author?.userName || tweet.authorUserName || ''
+          const tweetText = tweet.text || ''
+          const tweetId = tweet.id || String(Date.now())
 
           return {
             id: tweetId,
             platform: 'twitter' as const,
             author: authorName,
             authorHandle: authorHandle,
-            authorImage: tweet.author?.profilePicture || tweet.author?.avatar || tweet.user?.profile_image_url_https,
+            authorImage: tweet.author?.profilePicture || '',
             content: tweetText,
-            url: tweet.url || tweet.tweet_url || `https://twitter.com/${authorHandle}/status/${tweetId}`,
-            publishedAt: tweet.createdAt || tweet.created_at || tweet.date || new Date().toISOString(),
-            views: tweet.viewCount || tweet.views || tweet.view_count || 0,
-            likes: tweet.likeCount || tweet.favorite_count || tweet.likes || 0,
-            comments: tweet.replyCount || tweet.reply_count || tweet.replies || 0,
-            shares: tweet.retweetCount || tweet.retweet_count || tweet.retweets || 0,
+            url: tweet.url || `https://twitter.com/${authorHandle}/status/${tweetId}`,
+            publishedAt: tweet.createdAt || new Date().toISOString(),
+            views: tweet.viewCount ?? 0,
+            likes: tweet.likeCount ?? 0,
+            comments: tweet.replyCount ?? 0,
+            shares: tweet.retweetCount ?? 0,
             sentiment: analyzeSentiment(tweetText) as any
           }
         })
@@ -256,22 +258,23 @@ export async function searchTwitter(query: string, maxResults = 10): Promise<Soc
 }
 
 // ============================================
-// INSTAGRAM - Via Apify (apify/instagram-post-scraper)
-// https://apify.com/apify/instagram-post-scraper
+// INSTAGRAM - Via Apify (apify/instagram-hashtag-scraper)
+// Docs: https://apify.com/apify/instagram-hashtag-scraper
 // ============================================
 
 export async function searchInstagram(query: string, maxResults = 10): Promise<SocialSearchResult> {
   // Tenta Apify primeiro
   if (APIFY_TOKEN) {
     try {
-      console.log('📸 Buscando Instagram via Apify (apify/instagram-post-scraper)...')
+      console.log('📸 Buscando Instagram via Apify (apify/instagram-hashtag-scraper)...')
 
       // Remove espaços e caracteres especiais para hashtag
       const hashtag = query.replace(/[^a-zA-Z0-9]/gi, '').toLowerCase()
 
-      // Usando apify/instagram-post-scraper que é mais confiável
+      // Parâmetros conforme documentação oficial:
+      // https://apify.com/apify/instagram-hashtag-scraper
       const response = await fetch(
-        `https://api.apify.com/v2/acts/apify~instagram-post-scraper/run-sync-get-dataset-items?token=${APIFY_TOKEN}`,
+        `https://api.apify.com/v2/acts/apify~instagram-hashtag-scraper/run-sync-get-dataset-items?token=${APIFY_TOKEN}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -284,31 +287,33 @@ export async function searchInstagram(query: string, maxResults = 10): Promise<S
 
       if (response.ok) {
         const data = await response.json()
-        console.log('Instagram raw data:', data?.slice(0, 2)) // Debug
+        console.log('Instagram raw data (primeiro item):', JSON.stringify(data?.[0], null, 2)) // Debug
 
         if (data && data.length > 0) {
           const posts: SocialPost[] = (data || []).slice(0, maxResults).map((post: any) => {
-            const shortCode = post.shortCode || post.code || post.id
-            const username = post.ownerUsername || post.owner?.username || post.username || 'Desconhecido'
+            // Campos conforme documentação:
+            // https://apify.com/apify/instagram-hashtag-scraper
+            // shortCode, caption, url, likesCount, commentsCount, timestamp, ownerUsername (pode não existir para hashtags), displayUrl
+            const shortCode = post.shortCode || post.code || post.id || ''
+            // Para hashtags, ownerUsername pode não estar disponível, só ownerId
+            const username = post.ownerUsername || post.ownerFullName || `user_${post.ownerId}` || 'Instagram'
 
             return {
               id: post.id || shortCode || String(Date.now()),
               platform: 'instagram' as const,
               author: username,
-              authorHandle: username,
-              authorImage: post.owner?.profilePicUrl || post.profilePicUrl,
-              content: post.caption || post.text || post.description || '',
-              url: post.url || post.postUrl || `https://instagram.com/p/${shortCode}`,
+              authorHandle: post.ownerUsername || '',
+              authorImage: post.profilePicUrl || post.ownerProfilePicUrl || '',
+              content: post.caption || '',
+              url: post.url || `https://www.instagram.com/p/${shortCode}/`,
               publishedAt: post.timestamp
-                ? new Date(post.timestamp * 1000).toISOString()
-                : post.takenAtTimestamp
-                  ? new Date(post.takenAtTimestamp * 1000).toISOString()
-                  : new Date().toISOString(),
-              thumbnail: post.displayUrl || post.thumbnailUrl || post.imageUrl,
-              likes: post.likesCount || post.likeCount || post.likes || 0,
-              comments: post.commentsCount || post.commentCount || post.comments || 0,
-              views: post.videoViewCount || post.playCount || post.views || 0,
-              sentiment: analyzeSentiment(post.caption || post.text || '') as any
+                ? new Date(post.timestamp).toISOString()
+                : new Date().toISOString(),
+              thumbnail: post.displayUrl || post.thumbnailUrl || '',
+              likes: post.likesCount ?? 0,
+              comments: post.commentsCount ?? 0,
+              views: post.videoViewCount || post.videoPlayCount || 0,
+              sentiment: analyzeSentiment(post.caption || '') as any
             }
           })
 
