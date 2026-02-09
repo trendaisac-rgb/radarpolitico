@@ -1,20 +1,41 @@
 /**
  * RadarPolítico - Insights Section
- * Seção de resumo e recomendações
+ * Seção de resumo e recomendações com análise de IA
  */
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Brain, Lightbulb, FileText, CheckCircle2 } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { Brain, Lightbulb, FileText, CheckCircle2, AlertTriangle, TrendingUp, Sparkles } from 'lucide-react'
+
+export interface Risk {
+  level?: 'alto' | 'medio' | 'baixo'
+  severity?: 'alto' | 'medio' | 'baixo'
+  description: string
+  recommendation?: string
+  action?: string
+}
 
 export interface InsightsSectionProps {
   sumario?: string | null
   recomendacoes?: string[] | null
   summary?: string | null
   recommendations?: string[] | null
+  risks?: Risk[] | null
+  opportunities?: string[] | null
   isLoading?: boolean
+  isAIGenerated?: boolean
 }
 
-export function InsightsSection({ sumario, recomendacoes, summary, recommendations, isLoading }: InsightsSectionProps) {
+export function InsightsSection({
+  sumario,
+  recomendacoes,
+  summary,
+  recommendations,
+  risks,
+  opportunities,
+  isLoading,
+  isAIGenerated
+}: InsightsSectionProps) {
   const resolvedSumario = sumario || summary || null
   const resolvedRecomendacoes = recomendacoes || recommendations || null
   const hasContent = resolvedSumario || (resolvedRecomendacoes && resolvedRecomendacoes.length > 0)
@@ -23,8 +44,13 @@ export function InsightsSection({ sumario, recomendacoes, summary, recommendatio
     return (
       <Card className="shadow-lg">
         <CardContent className="py-12 text-center">
-          <Brain className="h-12 w-12 mx-auto text-muted-foreground mb-4 opacity-50 animate-pulse" />
-          <h3 className="font-medium text-muted-foreground mb-2">Carregando insights...</h3>
+          <Brain className="h-12 w-12 mx-auto text-primary mb-4 animate-pulse" />
+          <h3 className="font-medium text-muted-foreground mb-2">
+            {isAIGenerated === undefined ? 'Analisando com IA...' : 'Carregando insights...'}
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            A inteligência artificial está processando os dados
+          </p>
         </CardContent>
       </Card>
     )
@@ -46,54 +72,136 @@ export function InsightsSection({ sumario, recomendacoes, summary, recommendatio
     )
   }
 
-  return (
-    <div className="grid md:grid-cols-2 gap-6">
-      {/* Resumo */}
-      <Card className="shadow-lg">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
-            <FileText className="h-4 w-4 text-primary" />
-            Resumo do Dia
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {resolvedSumario ? (
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              {resolvedSumario}
-            </p>
-          ) : (
-            <p className="text-sm text-muted-foreground italic">
-              Resumo não disponível
-            </p>
-          )}
-        </CardContent>
-      </Card>
+  const riskColors = {
+    alto: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
+    medio: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
+    baixo: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
+  }
 
-      {/* Recomendações */}
-      <Card className="shadow-lg">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Lightbulb className="h-4 w-4 text-yellow-500" />
-            Recomendações
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {resolvedRecomendacoes && resolvedRecomendacoes.length > 0 ? (
-            <ul className="space-y-3">
-              {resolvedRecomendacoes.map((rec, index) => (
-                <li key={index} className="flex gap-3 text-sm">
-                  <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0 mt-0.5" />
-                  <span className="text-muted-foreground">{rec}</span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-sm text-muted-foreground italic">
-              Nenhuma recomendação no momento
-            </p>
+  return (
+    <div className="space-y-6">
+      {/* Badge de IA */}
+      {isAIGenerated && (
+        <div className="flex items-center gap-2">
+          <Badge variant="secondary" className="bg-gradient-to-r from-primary/10 to-accent/10 text-primary">
+            <Sparkles className="h-3 w-3 mr-1" />
+            Análise gerada por IA
+          </Badge>
+        </div>
+      )}
+
+      <div className="grid md:grid-cols-2 gap-6">
+        {/* Resumo */}
+        <Card className="shadow-lg">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <FileText className="h-4 w-4 text-primary" />
+              Resumo Executivo
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {resolvedSumario ? (
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                {resolvedSumario}
+              </p>
+            ) : (
+              <p className="text-sm text-muted-foreground italic">
+                Resumo não disponível
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Recomendações */}
+        <Card className="shadow-lg">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Lightbulb className="h-4 w-4 text-yellow-500" />
+              Recomendações
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {resolvedRecomendacoes && resolvedRecomendacoes.length > 0 ? (
+              <ul className="space-y-3">
+                {resolvedRecomendacoes.slice(0, 5).map((rec, index) => (
+                  <li key={index} className="flex gap-3 text-sm">
+                    <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0 mt-0.5" />
+                    <span className="text-muted-foreground">{rec}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-muted-foreground italic">
+                Nenhuma recomendação no momento
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Riscos e Oportunidades - só mostra se tiver dados da IA */}
+      {(risks && risks.length > 0) || (opportunities && opportunities.length > 0) ? (
+        <div className="grid md:grid-cols-2 gap-6">
+          {/* Riscos */}
+          {risks && risks.length > 0 && (
+            <Card className="shadow-lg border-red-200 dark:border-red-900/30">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 text-red-500" />
+                  Pontos de Atenção
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-4">
+                  {risks.slice(0, 3).map((risk, index) => {
+                    const riskLevel = risk.level || risk.severity || 'medio'
+                    const riskAction = risk.recommendation || risk.action || ''
+                    return (
+                      <li key={index} className="space-y-2">
+                        <div className="flex items-start gap-2">
+                          <Badge className={riskColors[riskLevel]} variant="secondary">
+                            {riskLevel.toUpperCase()}
+                          </Badge>
+                          <span className="text-sm text-muted-foreground flex-1">
+                            {risk.description}
+                          </span>
+                        </div>
+                        {riskAction && (
+                          <p className="text-xs text-muted-foreground/70 ml-16 italic">
+                            {riskAction}
+                          </p>
+                        )}
+                      </li>
+                    )
+                  })}
+                </ul>
+              </CardContent>
+            </Card>
           )}
-        </CardContent>
-      </Card>
+
+          {/* Oportunidades */}
+          {opportunities && opportunities.length > 0 && (
+            <Card className="shadow-lg border-green-200 dark:border-green-900/30">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4 text-green-500" />
+                  Oportunidades
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-3">
+                  {opportunities.slice(0, 4).map((opp, index) => (
+                    <li key={index} className="flex gap-3 text-sm">
+                      <TrendingUp className="h-4 w-4 text-green-500 shrink-0 mt-0.5" />
+                      <span className="text-muted-foreground">{opp}</span>
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      ) : null}
     </div>
   )
 }

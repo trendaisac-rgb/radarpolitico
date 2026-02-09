@@ -14,7 +14,7 @@ import {
   BarChart3, RefreshCw, Plus, Home, LogOut, Bell,
   Newspaper, TrendingUp, TrendingDown, Minus, Loader2,
   AlertTriangle, CheckCircle2, Info, ExternalLink,
-  Clock, Zap, Play
+  Clock, Zap, Play, Sparkles
 } from 'lucide-react'
 import { supabase, type Politician, type Mention } from '@/integrations/supabase/client'
 import { toast } from 'sonner'
@@ -31,6 +31,7 @@ import { usePoliticians } from '@/hooks/usePoliticians'
 import { useMentions, useMentionStats } from '@/hooks/useMentions'
 import { useMonitoring } from '@/hooks/useMonitoring'
 import { searchAllNetworks, type SocialSearchResult } from '@/services/socialMedia'
+import { analyzeWithAI, type AIAnalysisResult, isAIConfigured } from '@/services/aiAnalysis'
 
 // Ícones das redes
 const networkIcons: Record<string, string> = {
@@ -178,6 +179,10 @@ export default function DashboardPro() {
   const [loadingSocial, setLoadingSocial] = useState(false)
   const [chartPeriod, setChartPeriod] = useState<number>(7)
 
+  // IA Analysis
+  const [aiAnalysis, setAIAnalysis] = useState<AIAnalysisResult | null>(null)
+  const [loadingAI, setLoadingAI] = useState(false)
+
   // Auth
   useEffect(() => {
     const checkAuth = async () => {
@@ -228,6 +233,8 @@ export default function DashboardPro() {
   useEffect(() => {
     if (currentPolitician) {
       fetchSocialNetworks(currentPolitician)
+      // Reseta análise de IA quando muda de político
+      setAIAnalysis(null)
     }
   }, [currentPolitician?.id])
 
@@ -243,6 +250,77 @@ export default function DashboardPro() {
       setLoadingSocial(false)
     }
   }
+
+  // Executa análise de IA quando tiver dados
+  const runAIAnalysis = async () => {
+    if (!currentPolitician || mentions.length === 0) return
+    if (!isAIConfigured()) {
+      console.log('OpenAI não configurada, usando análise local')
+      return
+    }
+
+    setLoadingAI(true)
+    try {
+      // Função helper para criar dados de rede
+      const createNetworkData = (name: string, results: typeof socialResults.youtube) => ({
+        network: name,
+        mentions: results?.totalResults || 0,
+        positive: results?.posts?.filter(p => p.sentiment === 'positivo').length || 0,
+        negative: results?.posts?.filter(p => p.sentiment === 'negativo').length || 0,
+        neutral: results?.posts?.filter(p => p.sentiment === 'neutro').length || 0,
+        topPosts: results?.posts?.slice(0, 5).map(p => ({
+          content: p.content || '',
+          author: p.author || 'Desconhecido',
+          engagement: (p.likes || 0) + (p.comments || 0) + (p.views || 0),
+          url: p.url || ''
+        })) || []
+      })
+
+      // Prepara dados para a IA no formato correto
+      const reportData = {
+        politicianName: currentPolitician.name,
+        party: currentPolitician.party,
+        position: currentPolitician.cargo,
+        date: new Date().toLocaleDateString('pt-BR'),
+        mentions: mentions.map(m => ({
+          title: m.title || '',
+          content: m.content || m.summary || '',
+          source: m.source_name || 'Desconhecido',
+          url: m.url || '',
+          platform: m.source_name?.toLowerCase().includes('youtube') ? 'youtube' : 'midia',
+          publishedAt: m.published_at || m.created_at
+        })),
+        networks: [
+          createNetworkData('YouTube', socialResults.youtube),
+          createNetworkData('Twitter/X', socialResults.twitter),
+          createNetworkData('Instagram', socialResults.instagram),
+          createNetworkData('TikTok', socialResults.tiktok)
+        ].filter(n => n.mentions > 0 || n.topPosts.length > 0)
+      }
+
+      const result = await analyzeWithAI(reportData)
+      setAIAnalysis(result)
+      toast.success('Análise de IA concluída!')
+    } catch (error) {
+      console.error('Erro na análise de IA:', error)
+      toast.error('Erro na análise de IA')
+    } finally {
+      setLoadingAI(false)
+    }
+  }
+
+  // Executa análise quando dados carregarem
+  useEffect(() => {
+    if (mentions.length > 0 && !loadingMentions && !loadingSocial && isAIConfigured()) {
+      // Delay para não executar muitas vezes
+      const timer = setTimeout(() => {
+        if (!aiAnalysis && !loadingAI) {
+          runAIAnalysis()
+        }
+      }, 1000)
+      return () => clearTimeout(timer)
+    }
+  }, [mentions.length, loadingMentions, loadingSocial])
 
   // Monitoramento
   const handleRunMonitoring = async () => {
@@ -289,7 +367,17 @@ export default function DashboardPro() {
       ? 'Atenção redobrada recomendada'
       : 'Situação crítica - Ação necessária'
 
-  const insights = generateAIInsights(mentions, socialResults, score)
+  // Usa insights da IA quando disponível, senão usa análise local
+  const insights = aiAnalysis
+    ? {
+        summary: aiAnalysis.summary,
+        recommendations: aiAnalysis.recommendations,
+        alertLevel: aiAnalysis.alertLevel,
+        alertReason: aiAnalysis.alertReason,
+        risks: aiAnalysis.risks,
+        opportunities: aiAnalysis.opportunities
+      }
+    : generateAIInsights(mentions, socialResults, score)
 
   // Prepara dados das redes
   const networkData = {
@@ -423,6 +511,26 @@ export default function DashboardPro() {
                 </>
               )}
             </Button>
+            {isAIConfigured() && (
+              <Button
+                variant="outline"
+                onClick={runAIAnalysis}
+                disabled={loadingAI || mentions.length === 0}
+                title="Gerar análise com IA"
+              >
+                {loadingAI ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Analisando...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    Análise IA
+                  </>
+                )}
+              </Button>
+            )}
             <Button variant="outline" onClick={() => navigate('/add-politician')}>
               <Plus className="h-4 w-4 mr-2" />
               Novo
@@ -492,7 +600,10 @@ export default function DashboardPro() {
         <InsightsSection
           summary={insights.summary}
           recommendations={insights.recommendations}
-          isLoading={loadingMentions}
+          risks={aiAnalysis?.risks}
+          opportunities={aiAnalysis?.opportunities}
+          isLoading={loadingMentions || loadingAI}
+          isAIGenerated={!!aiAnalysis}
         />
 
         {/* Menções Recentes */}
