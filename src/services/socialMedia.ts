@@ -382,7 +382,7 @@ export async function searchInstagram(query: string, maxResults = 10): Promise<S
 
 // ============================================
 // TIKTOK - Via Apify (clockworks/tiktok-scraper)
-// ID do actor: GdWCkxBtKWOsKjdch (mesmo do n8n)
+// Configuração que estava funcionando
 // ============================================
 
 export async function searchTikTok(query: string, maxResults = 10): Promise<SocialSearchResult> {
@@ -391,26 +391,16 @@ export async function searchTikTok(query: string, maxResults = 10): Promise<Soci
     try {
       console.log('🎵 Buscando TikTok via Apify (clockworks/tiktok-scraper)...')
 
-      // Usando o mesmo actor do n8n que funcionava (GdWCkxBtKWOsKjdch)
-      const hashtag = query.replace(/[^a-zA-Z0-9]/gi, '').toLowerCase()
       const response = await fetch(
-        `https://api.apify.com/v2/acts/GdWCkxBtKWOsKjdch/run-sync-get-dataset-items?token=${APIFY_TOKEN}`,
+        `https://api.apify.com/v2/acts/clockworks~tiktok-scraper/run-sync-get-dataset-items?token=${APIFY_TOKEN}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            excludePinnedPosts: false,
-            hashtags: [hashtag],
-            proxyCountryCode: 'BR',
+            searchQueries: [query],
             resultsPerPage: maxResults * 2,
-            scrapeRelatedVideos: false,
-            searchDatePosted: '1',
-            shouldDownloadAvatars: false,
-            shouldDownloadCovers: false,
-            shouldDownloadMusicCovers: false,
-            shouldDownloadSlideshowImages: false,
-            shouldDownloadSubtitles: false,
-            shouldDownloadVideos: false
+            shouldDownloadVideos: false,
+            shouldDownloadCovers: false
           })
         }
       )
