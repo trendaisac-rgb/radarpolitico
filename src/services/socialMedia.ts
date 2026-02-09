@@ -126,12 +126,15 @@ export async function searchYouTube(query: string, maxResults = 10): Promise<Soc
       }
     }) || []
 
-    // Ordena por views
+    // Ordena por views e pega TOP 5
     posts.sort((a, b) => (b.views || 0) - (a.views || 0))
+    const top5 = posts.slice(0, 5)
+
+    console.log(`✅ YouTube: ${posts.length} vídeos encontrados, retornando TOP 5 por views`)
 
     return {
       platform: 'youtube',
-      posts,
+      posts: top5,
       totalResults: posts.length
     }
   } catch (error) {
@@ -184,10 +187,16 @@ export async function searchTwitter(query: string, maxResults = 10): Promise<Soc
           sentiment: analyzeSentiment(tweet.text || tweet.full_text || '') as any
         }))
 
-        posts.sort((a, b) => ((b.views || 0) + (b.likes || 0)) - ((a.views || 0) + (a.likes || 0)))
+        // Ordena por engajamento (views + likes + retweets) e pega TOP 5
+        posts.sort((a, b) => {
+          const engA = (a.views || 0) + (a.likes || 0) * 10 + (a.shares || 0) * 20
+          const engB = (b.views || 0) + (b.likes || 0) * 10 + (b.shares || 0) * 20
+          return engB - engA
+        })
+        const top5 = posts.slice(0, 5)
 
-        console.log(`✅ Twitter: ${posts.length} tweets encontrados`)
-        return { platform: 'twitter', posts, totalResults: posts.length }
+        console.log(`✅ Twitter: ${posts.length} tweets encontrados, retornando TOP 5 por engajamento`)
+        return { platform: 'twitter', posts: top5, totalResults: posts.length }
       }
     } catch (error) {
       console.error('Apify Twitter error:', error)
@@ -286,10 +295,16 @@ export async function searchInstagram(query: string, maxResults = 10): Promise<S
           sentiment: analyzeSentiment(post.caption || post.text || '') as any
         }))
 
-        posts.sort((a, b) => ((b.likes || 0) + (b.comments || 0)) - ((a.likes || 0) + (a.comments || 0)))
+        // Ordena por engajamento (likes + comments + views) e pega TOP 5
+        posts.sort((a, b) => {
+          const engA = (a.likes || 0) * 10 + (a.comments || 0) * 20 + (a.views || 0)
+          const engB = (b.likes || 0) * 10 + (b.comments || 0) * 20 + (b.views || 0)
+          return engB - engA
+        })
+        const top5 = posts.slice(0, 5)
 
-        console.log(`✅ Instagram: ${posts.length} posts encontrados`)
-        return { platform: 'instagram', posts, totalResults: posts.length }
+        console.log(`✅ Instagram: ${posts.length} posts encontrados, retornando TOP 5 por engajamento`)
+        return { platform: 'instagram', posts: top5, totalResults: posts.length }
       } else {
         const errorText = await response.text()
         console.error('Instagram API response error:', errorText)
@@ -389,10 +404,16 @@ export async function searchTikTok(query: string, maxResults = 10): Promise<Soci
           sentiment: analyzeSentiment(video.text || video.desc || video.description || '') as any
         }))
 
-        posts.sort((a, b) => (b.views || 0) - (a.views || 0))
+        // Ordena por views (principal métrica do TikTok) e pega TOP 5
+        posts.sort((a, b) => {
+          const engA = (a.views || 0) + (a.likes || 0) * 5 + (a.shares || 0) * 10
+          const engB = (b.views || 0) + (b.likes || 0) * 5 + (b.shares || 0) * 10
+          return engB - engA
+        })
+        const top5 = posts.slice(0, 5)
 
-        console.log(`✅ TikTok: ${posts.length} vídeos encontrados`)
-        return { platform: 'tiktok', posts, totalResults: posts.length }
+        console.log(`✅ TikTok: ${posts.length} vídeos encontrados, retornando TOP 5 por views`)
+        return { platform: 'tiktok', posts: top5, totalResults: posts.length }
       } else {
         const errorText = await response.text()
         console.error('TikTok API response error:', errorText)
