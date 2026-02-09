@@ -86,7 +86,7 @@ function socialResultToPosts(result: SocialSearchResult | undefined): SocialPost
 
 // Gera histórico de scores para o gráfico
 function generateScoreHistory(mentions: Mention[], days: number = 7) {
-  const history: { date: string; score: number; mentions: number }[] = []
+  const history: { data: string; score: number; mencoes?: number }[] = []
   const now = new Date()
 
   for (let i = days - 1; i >= 0; i--) {
@@ -112,9 +112,9 @@ function generateScoreHistory(mentions: Mention[], days: number = 7) {
     }
 
     history.push({
-      date: dayStr,
+      data: dayStr,
       score,
-      mentions: total
+      mencoes: total
     })
   }
 
@@ -176,7 +176,7 @@ export default function DashboardPro() {
   const [checkingAuth, setCheckingAuth] = useState(true)
   const [socialResults, setSocialResults] = useState<Record<string, SocialSearchResult>>({})
   const [loadingSocial, setLoadingSocial] = useState(false)
-  const [chartPeriod, setChartPeriod] = useState<'7D' | '15D' | '30D' | '90D'>('7D')
+  const [chartPeriod, setChartPeriod] = useState<number>(7)
 
   // Auth
   useEffect(() => {

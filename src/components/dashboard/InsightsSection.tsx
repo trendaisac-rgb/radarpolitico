@@ -6,13 +6,29 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Brain, Lightbulb, FileText, CheckCircle2 } from 'lucide-react'
 
-interface InsightsSectionProps {
-  sumario: string | null
-  recomendacoes: string[] | null
+export interface InsightsSectionProps {
+  sumario?: string | null
+  recomendacoes?: string[] | null
+  summary?: string | null
+  recommendations?: string[] | null
+  isLoading?: boolean
 }
 
-export function InsightsSection({ sumario, recomendacoes }: InsightsSectionProps) {
-  const hasContent = sumario || (recomendacoes && recomendacoes.length > 0)
+export function InsightsSection({ sumario, recomendacoes, summary, recommendations, isLoading }: InsightsSectionProps) {
+  const resolvedSumario = sumario || summary || null
+  const resolvedRecomendacoes = recomendacoes || recommendations || null
+  const hasContent = resolvedSumario || (resolvedRecomendacoes && resolvedRecomendacoes.length > 0)
+
+  if (isLoading) {
+    return (
+      <Card className="shadow-lg">
+        <CardContent className="py-12 text-center">
+          <Brain className="h-12 w-12 mx-auto text-muted-foreground mb-4 opacity-50 animate-pulse" />
+          <h3 className="font-medium text-muted-foreground mb-2">Carregando insights...</h3>
+        </CardContent>
+      </Card>
+    )
+  }
 
   if (!hasContent) {
     return (
@@ -41,9 +57,9 @@ export function InsightsSection({ sumario, recomendacoes }: InsightsSectionProps
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {sumario ? (
+          {resolvedSumario ? (
             <p className="text-sm text-muted-foreground leading-relaxed">
-              {sumario}
+              {resolvedSumario}
             </p>
           ) : (
             <p className="text-sm text-muted-foreground italic">
@@ -62,9 +78,9 @@ export function InsightsSection({ sumario, recomendacoes }: InsightsSectionProps
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {recomendacoes && recomendacoes.length > 0 ? (
+          {resolvedRecomendacoes && resolvedRecomendacoes.length > 0 ? (
             <ul className="space-y-3">
-              {recomendacoes.map((rec, index) => (
+              {resolvedRecomendacoes.map((rec, index) => (
                 <li key={index} className="flex gap-3 text-sm">
                   <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0 mt-0.5" />
                   <span className="text-muted-foreground">{rec}</span>

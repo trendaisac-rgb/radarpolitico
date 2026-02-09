@@ -135,7 +135,7 @@ export async function searchYouTube(query: string, maxResults = 10): Promise<Soc
     }
   } catch (error) {
     console.error('YouTube search error:', error)
-    return { platform: 'youtube', posts: [], totalFound: 0, error: String(error) }
+    return { platform: 'youtube', posts: [], totalResults: 0, error: String(error) }
   }
 }
 
@@ -379,10 +379,6 @@ export async function searchTikTok(query: string, maxResults = 10): Promise<Soci
 
   // Fallback para dados mock
   return generateMockTikTokData(query, maxResults)
-  } catch (error) {
-    console.error('TikTok search error:', error)
-    return generateMockTikTokData(query, maxResults)
-  }
 }
 
 // ============================================

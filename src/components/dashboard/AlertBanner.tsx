@@ -5,9 +5,10 @@
 
 import { AlertTriangle, CheckCircle, AlertCircle, XCircle } from 'lucide-react'
 
-interface AlertBannerProps {
+export interface AlertBannerProps {
   nivel: 'verde' | 'amarelo' | 'vermelho' | null
   motivo: string | null
+  className?: string
 }
 
 const alertConfig = {
@@ -34,14 +35,14 @@ const alertConfig = {
   }
 }
 
-export function AlertBanner({ nivel, motivo }: AlertBannerProps) {
+export function AlertBanner({ nivel, motivo, className }: AlertBannerProps) {
   if (!nivel) return null
 
   const config = alertConfig[nivel]
   const Icon = config.icon
 
   return (
-    <div className={`flex items-center gap-3 p-4 rounded-lg border mb-6 ${config.bg}`}>
+    <div className={`flex items-center gap-3 p-4 rounded-lg border ${config.bg} ${className || ''}`}>
       <Icon className={`h-5 w-5 shrink-0 ${config.iconColor}`} />
       <div className="flex-1">
         <p className={`font-medium ${config.text}`}>
