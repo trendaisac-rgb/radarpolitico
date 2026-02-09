@@ -79,8 +79,8 @@ async function fetchActivePolitician(): Promise<Politician | null> {
 async function fetchTodayReport(politicianId: number): Promise<DailyReport | null> {
   const today = new Date().toISOString().split('T')[0]
 
-  const { data, error } = await supabase
-    .from('daily_reports')
+  const { data, error } = await (supabase
+    .from('daily_reports') as any)
     .select('*')
     .eq('politician_id', politicianId)
     .eq('data', today)
@@ -99,7 +99,7 @@ async function fetchTodayReport(politicianId: number): Promise<DailyReport | nul
 async function fetchNetworkMetrics(politicianId: number): Promise<NetworkMetric[]> {
   const today = new Date().toISOString().split('T')[0]
 
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('network_metrics')
     .select('*')
     .eq('politician_id', politicianId)
@@ -135,8 +135,8 @@ async function fetchScoreHistory(politicianId: number, days = 30): Promise<Score
   const startDate = new Date()
   startDate.setDate(startDate.getDate() - days)
 
-  const { data, error } = await supabase
-    .from('daily_reports')
+  const { data, error } = await (supabase
+    .from('daily_reports') as any)
     .select('data, score, total_mencoes')
     .eq('politician_id', politicianId)
     .gte('data', startDate.toISOString().split('T')[0])
@@ -223,8 +223,8 @@ async function generateDailyReport(politician: Politician, mentions: Mention[]):
     mencoes_neutras: neutras
   }
 
-  const { data, error } = await supabase
-    .from('daily_reports')
+  const { data, error } = await (supabase
+    .from('daily_reports') as any)
     .upsert(reportData, { onConflict: 'politician_id,data' })
     .select()
     .single()
@@ -300,7 +300,7 @@ async function saveNetworkMetrics(
 
   // Upsert todas as métricas
   for (const metric of metrics) {
-    await supabase
+    await (supabase as any)
       .from('network_metrics')
       .upsert(metric, { onConflict: 'politician_id,data,rede' })
   }

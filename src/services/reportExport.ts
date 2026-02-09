@@ -204,8 +204,8 @@ export function generateReportHTML(data: ReportData): string {
 export async function exportToPDF(data: ReportData): Promise<Blob | null> {
   try {
     // Importação dinâmica para evitar erros se não estiver instalado
-    const html2canvas = (await import('html2canvas')).default
-    const { jsPDF } = await import('jspdf')
+    const html2canvas = (await import('html2canvas' as any)).default
+    const { jsPDF } = await import('jspdf' as any)
 
     // Cria elemento temporário com o HTML
     const container = document.createElement('div')
