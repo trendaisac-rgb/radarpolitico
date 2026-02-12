@@ -120,85 +120,81 @@ const ANALYSIS_PROMPT = `${ANALYST_PERSONA}
 
 ## SUA TAREFA
 
-Produza um BRIEFING DE INTELIGÊNCIA POLÍTICA que justifique R$3.000/mês de assinatura.
+Você é o assessor que se reúne todo dia com o político e passa um BRIEFING DE 5 MINUTOS sobre o que está acontecendo na mídia.
 
-## O QUE VOCÊ DEVE ENTREGAR
+## REGRA #1 — PROIBIDO FALAR NÚMEROS DE MENÇÕES
 
-### 1. HISTÓRIA DO DIA (Obrigatório)
-Identifique A história principal que está movendo a cobertura. Exemplos:
-- "Toffoli é ligado ao caso Banco Master — conexão com Daniel Vorcaro ganha destaque"
-- "Ministro enfrenta rebelião na base após veto a emenda"
-- "Governador inaugura maior hospital do estado — cobertura amplamente positiva"
+❌ ERRADO: "A cobertura apresenta 30 menções na mídia e YouTube. Distribuição: 1 favoráveis (3%), 3 críticas (10%), 26 neutras."
+❌ ERRADO: "Foram identificadas X menções positivas e Y negativas"
+❌ ERRADO: "PANORAMA: A cobertura do dia apresenta N menções..."
 
-CRUZE os dados: se 3+ veículos falam do mesmo assunto, ESSE é o tema central.
+✅ CERTO: Vá direto aos FATOS. Diga O QUE as notícias estão falando.
 
-### 2. RESUMO EXECUTIVO (Obrigatório)
-NO RESUMO, você DEVE:
-- **CITAR notícias específicas pelo título** — "Segundo reportagem 'Título X' do Estadão..."
-- **NOMEAR pessoas e entidades envolvidas** — empresários, bancos, investigações, aliados
-- **CONECTAR os fatos** — "A mesma fonte citada pelo G1 aparece na reportagem da Folha..."
-- **EXPLICAR o impacto** — O que isso significa para a imagem do político
+## COMO DEVE SER O RESUMO
 
-EXEMPLO DE RESUMO BOM:
-"A cobertura de hoje é dominada pelo caso Banco Master. A reportagem 'Toffoli manteve contato com Vorcaro durante julgamento' (Estadão) detalha que o ministro teria se encontrado com o empresário Daniel Vorcaro em jantar reservado. O G1 corrobora com 'PF amplia investigação sobre relação entre STF e setor financeiro'. O YouTube mostra 4 vídeos críticos, sendo o de maior alcance 'A verdade sobre Toffoli e o Banco Master' (Canal X, 250K views). Score 28/100 — situação crítica que demanda posicionamento."
+Imagine que você está falando com o político:
 
-EXEMPLO DE RESUMO RUIM (NÃO FAÇA ISSO):
-"A cobertura apresenta 15 menções, sendo 8 negativas e 7 neutras. O tom é predominantemente crítico. Recomenda-se monitoramento."
+"Presidente, nas últimas 24 horas a mídia focou em três temas principais sobre o senhor:
 
-### 3. SCORE (0-100)
-- 80-100: Momento de ouro — capitalize
-- 60-79: Cenário favorável — mantenha
-- 40-59: Equilibrado — atenção
-- 20-39: Desgaste — ação necessária
-- 0-19: Crise severa — resposta imediata
+1. A ligação com Daniel Vorcaro do Banco Master dominou a cobertura. O Estadão publicou 'Toffoli se reuniu com empresário durante julgamento do banco', detalhando um jantar em Brasília. A Folha corroborou com 'Ministro nega irregularidade mas não explica encontro'. O tom é crítico — a narrativa é de conflito de interesses.
 
-### 4. CLASSIFICAÇÃO DE SENTIMENTO
-Para CADA notícia, classifique (APARTIDÁRIO):
-- **POSITIVO**: Fortalece imagem (conquistas, elogios, apoio)
-- **NEGATIVO**: Enfraquece imagem (críticas, escândalos, investigações)
-- **NEUTRO**: Factual sem impacto claro
+2. Sua declaração sobre o inquérito das fake news gerou repercussão. O G1 destacou 'Toffoli defende continuidade de investigações', enquanto canais bolsonaristas no YouTube atacam: 'A verdade sobre Toffoli e a censura' (Canal X, 180K views) é o vídeo mais viral.
+
+3. Tema menor: sua participação na posse do novo ministro do TSE foi coberta de forma protocolar, sem impacto na imagem.
+
+Score: 28/100 — Situação crítica. A narrativa do Banco Master está se consolidando e precisa de resposta."
+
+## FORMATO DO RESUMO (summary)
+
+PARÁGRAFO 1: O tema central das últimas 24h. Qual a "história do dia"? Cite a notícia principal.
+
+PARÁGRAFO 2-3: Outros temas relevantes. O que mais está sendo falado? Cite notícias e fontes.
+
+PARÁGRAFO 4: YouTube — quais vídeos estão viralizando? Cite títulos e canais.
+
+PARÁGRAFO FINAL: Score e avaliação geral em UMA frase.
 
 ## FORMATO JSON
 
 {
-  "summary": "BRIEFING EXECUTIVO (20-30 frases). OBRIGATÓRIO: Cite títulos de notícias específicas, nomes de pessoas/empresas envolvidas, e cruze informações entre fontes. Seu cliente paga R$3000/mês — entregue inteligência, não estatísticas.",
+  "summary": "BRIEFING DIRETO (sem contar menções). Descreva os FATOS: o que as notícias dizem, quem é citado, qual a narrativa. Como você falaria para o político em 5 minutos.",
 
-  "historiaDoDia": "A MANCHETE que resume o que está acontecendo hoje. Ex: 'Toffoli sob pressão por ligação com Banco Master' ou 'Ministro colhe frutos de programa social bem-sucedido'",
+  "historiaDoDia": "O tema central. Ex: 'Ligação de Toffoli com Daniel Vorcaro do Banco Master domina cobertura' ou 'Nomeação de servidor que perdeu vaga para cadeirante gera crise para João Campos'",
 
   "fatosRelevantes": [
-    "Fato 1: Nome, empresa, situação específica citada nas notícias",
-    "Fato 2: Conexão identificada entre reportagens",
-    "Fato 3: Dado numérico ou declaração importante"
+    "Estadão: Toffoli se reuniu com Daniel Vorcaro durante julgamento — detalha jantar em Brasília",
+    "Folha: Ministro nega irregularidade mas não explica encontro com empresário",
+    "YouTube: Vídeo 'A verdade sobre Toffoli' (Canal X) com 180K views ataca ministro"
   ],
 
-  "narrativaDominante": "Descrição da narrativa que a mídia está construindo",
+  "narrativaDominante": "A história que a mídia está construindo. Ex: 'Conflito de interesses entre Toffoli e setor financeiro'",
 
-  "temasCriticos": ["Temas que podem escalar ou já são sensíveis"],
+  "temasCriticos": ["Temas que podem escalar — ex: 'Relação com Banco Master', 'Inquérito fake news'"],
 
-  "tonDaCobertura": "Descrição qualitativa com exemplos: 'Crítico, focado na relação com o setor bancário — Estadão e Folha lideram cobertura negativa'",
+  "tonDaCobertura": "Ex: 'Crítico — Estadão e Folha lideram com tom investigativo. YouTube amplifica com conteúdo de ataque.'",
 
   "overallSentiment": "positivo|negativo|neutro|misto",
 
   "sentimentScore": 0-100,
 
   "alertLevel": "verde|amarelo|vermelho",
-  "alertReason": "Justificativa baseada em fatos específicos",
+  "alertReason": "Ex: 'Narrativa de conflito de interesses se consolidando — risco de CPI'",
 
   "topNews": [
     {
       "title": "Título EXATO da notícia",
       "source": "Veículo",
       "sentiment": "positivo|negativo|neutro",
-      "relevance": "Por que essa notícia é importante? Quem é citado? Qual a conexão com outros fatos?",
+      "relevance": "O que essa notícia diz? Quem é citado? Qual o impacto?",
       "url": "URL"
     }
   ],
 
-  "mainTopics": ["Tópicos identificados com base nos títulos reais"],
+  "mainTopics": ["Tópicos baseados nas notícias reais"],
 
   "recommendations": [
-    "Ação 1: Específica e baseada nos fatos identificados",
-    "Ação 2: Como você aconselharia um cliente pagando R$3000/mês"
+    "Ação específica baseada nos fatos. Ex: 'Preparar nota sobre relação com Banco Master'",
+    "Ação 2 específica. Ex: 'Evitar declarações sobre inquérito até baixar repercussão'"
   ],
 
   "networkScores": [
@@ -206,35 +202,35 @@ Para CADA notícia, classifique (APARTIDÁRIO):
       "network": "Mídia",
       "score": 0-100,
       "trend": "subindo|descendo|estavel",
-      "insight": "Análise com citação de veículos específicos"
+      "insight": "Ex: 'Estadão e Folha com tom crítico sobre Banco Master. G1 neutro.'"
     },
     {
       "network": "YouTube",
       "score": 0-100,
       "trend": "subindo|descendo|estavel",
-      "insight": "Análise com citação de canais e vídeos específicos"
+      "insight": "Ex: 'Canais de oposição dominam com 3 vídeos críticos viralizando'"
     }
   ],
 
   "risks": [
     {
-      "description": "Risco específico baseado em fatos das notícias",
+      "description": "Ex: 'Narrativa de conflito de interesses pode virar pedido de CPI'",
       "severity": "baixo|medio|alto",
-      "action": "Recomendação concreta"
+      "action": "Ex: 'Preparar defesa técnica e acionar aliados no Senado'"
     }
   ],
 
-  "opportunities": ["Oportunidades identificadas com base na cobertura"]
+  "opportunities": ["Ex: 'Cobertura da posse no TSE pode ser amplificada como contraponto institucional'"]
 }
 
 ## REGRAS ABSOLUTAS
 
-1. **CITE TÍTULOS E FONTES** — No summary, SEMPRE mencione "segundo a reportagem 'X' do Y"
-2. **NOMEIE PESSOAS E ENTIDADES** — Se a notícia menciona um empresário, banco, investigação — cite pelo nome
-3. **CRUZE DADOS** — Se múltiplas fontes falam do mesmo assunto, destaque a convergência
-4. **SCORE REAL** — Não comece do 50. Se a cobertura é devastadora, o score pode ser 12.
-5. **V1** — Monitora apenas Mídia (Google News) e YouTube. NÃO mencione redes que não temos dados.
-6. **POUCOS DADOS** — Se há <3 menções, reconheça e ajuste confiança do score.`
+1. **ZERO ESTATÍSTICAS NO SUMMARY** — NÃO fale "X menções", "Y positivas", "Z negativas". VÁ DIRETO AOS FATOS.
+2. **CITE O QUE AS NOTÍCIAS DIZEM** — "Estadão publicou que Toffoli se reuniu com Vorcaro..."
+3. **NOMEIE PESSOAS** — Daniel Vorcaro, Banco Master, não "empresário do setor financeiro"
+4. **FATOSRELEVANTES = CITAÇÕES** — Cada item deve ser "Fonte: O que a notícia diz"
+5. **V1** — Monitora apenas Mídia e YouTube. NÃO mencione Twitter, Instagram, TikTok.
+6. **SCORE REAL** — Se a cobertura é devastadora, score pode ser 15. Se é excelente, pode ser 85.`
 
 // ============================================
 // FUNÇÃO PRINCIPAL
@@ -366,14 +362,21 @@ function formatDataForAI(data: DailyReportData): string {
   }
 
   message += `${'═'.repeat(60)}\n`
-  message += `📋 SUA TAREFA\n`
+  message += `📋 INSTRUÇÕES CRÍTICAS\n`
   message += `${'═'.repeat(60)}\n\n`
-  message += `1. IDENTIFIQUE A HISTÓRIA DO DIA — Qual o tema central? (cruze os dados)\n`
-  message += `2. NO SUMMARY: CITE títulos de notícias específicas e nomes\n`
-  message += `3. CRUZE informações entre fontes — se aparecem em múltiplas, destaque\n`
-  message += `4. SCORE 0-100 baseado na gravidade real da cobertura\n`
-  message += `5. Responda em JSON válido\n\n`
-  message += `⚠️ LEMBRE: Seu cliente paga R$3000/mês. Entregue INTELIGÊNCIA, não estatísticas.\n`
+  message += `🚫 PROIBIDO NO RESUMO:\n`
+  message += `   - "X menções na mídia"\n`
+  message += `   - "Y positivas, Z negativas"\n`
+  message += `   - Qualquer contagem ou estatística\n\n`
+  message += `✅ OBRIGATÓRIO NO RESUMO:\n`
+  message += `   - Dizer O QUE as notícias falam (o conteúdo)\n`
+  message += `   - Citar NOMES de pessoas, empresas, investigações\n`
+  message += `   - Ex: "Estadão publicou que Toffoli se reuniu com Daniel Vorcaro..."\n\n`
+  message += `📰 LEIA CADA NOTÍCIA ACIMA e extraia:\n`
+  message += `   - Qual o FATO reportado?\n`
+  message += `   - Quem são os ENVOLVIDOS?\n`
+  message += `   - Qual a NARRATIVA sendo construída?\n\n`
+  message += `🎯 Responda em JSON válido.\n`
 
   return message
 }
@@ -488,46 +491,47 @@ function analyzeLocally(data: DailyReportData): AIAnalysisResult {
     url: m.url
   }))
 
-  // Summary como um analista político escreveria
-  const posPercent = totalMentions > 0 ? Math.round((positiveCount / totalMentions) * 100) : 0
-  const negPercent = totalMentions > 0 ? Math.round((negativeCount / totalMentions) * 100) : 0
-
-  let summary = `RELATÓRIO DE MONITORAMENTO — ${data.date}\n\n`
-  summary += `${data.politicianName}${data.party ? ` (${data.party})` : ''}${data.position ? `, ${data.position}` : ''}\n\n`
+  // Summary baseado no CONTEÚDO das notícias, não em estatísticas
+  let summary = ''
 
   if (totalMentions === 0) {
-    summary += `PANORAMA: Não foram identificadas menções relevantes no período analisado. `
-    summary += `A ausência de cobertura pode indicar momento de baixa exposição midiática. `
-    summary += `Recomenda-se avaliar oportunidades de pauta para retomar visibilidade.`
+    summary = `Não foram identificadas notícias relevantes sobre ${data.politicianName} nas últimas 24 horas. `
+    summary += `Momento de baixa exposição midiática — pode ser oportunidade para pautar temas favoráveis.`
   } else if (totalMentions < 3) {
-    summary += `PANORAMA: Cobertura limitada com apenas ${totalMentions} menção(ões) identificada(s). `
-    summary += `Amostra insuficiente para análise conclusiva. Score provisório de ${sentimentScore}/100. `
-    summary += `Recomenda-se aguardar mais dados ou intensificar ações de assessoria de imprensa.`
+    // Com poucas notícias, citar diretamente
+    const topMention = analyzedMentions[0]
+    summary = `Cobertura limitada nas últimas 24 horas. `
+    if (topMention) {
+      summary += `A principal notícia é "${topMention.title}" (${topMention.source}). `
+    }
+    summary += `Aguardando mais dados para análise completa. Score provisório: ${sentimentScore}/100.`
   } else {
-    summary += `PANORAMA: A cobertura do dia apresenta ${totalMentions} menções na mídia e YouTube. `
-    summary += `Distribuição: ${positiveCount} favoráveis (${posPercent}%), ${negativeCount} críticas (${negPercent}%), ${neutralCount} neutras. `
+    // Com várias notícias, criar resumo baseado no conteúdo
+    summary = `Nas últimas 24 horas, a cobertura de ${data.politicianName} focou nos seguintes temas:\n\n`
 
-    summary += `\n\nNARRATIVA DOMINANTE: ${narrativaDominante}. `
+    // Agrupar notícias por tema/fonte e descrever
+    const topMentions = analyzedMentions.slice(0, 5)
 
+    topMentions.forEach((m, i) => {
+      const sentimentLabel = m.sentiment === 'positivo' ? '(tom favorável)' :
+                            m.sentiment === 'negativo' ? '(tom crítico)' : ''
+      summary += `${i + 1}. ${m.source}: "${m.title}" ${sentimentLabel}\n`
+    })
+
+    summary += `\n`
+
+    // Avaliação geral
     if (overallSentiment === 'positivo') {
-      summary += `O tom geral da cobertura é favorável, com destaque para notícias que fortalecem a imagem pública. `
-      summary += `Momento propício para amplificar conquistas e avançar agenda estratégica. `
+      summary += `A narrativa geral é favorável — momento para amplificar conquistas.`
     } else if (overallSentiment === 'negativo') {
-      summary += `O tom predominante é crítico, com cobertura que pressiona a imagem do político. `
-      summary += `Atenção especial aos temas que geraram repercussão negativa — resposta estratégica pode ser necessária. `
+      summary += `A cobertura está predominantemente crítica — atenção aos temas sensíveis.`
     } else if (overallSentiment === 'misto') {
-      summary += `A cobertura está dividida entre apoiadores e críticos. `
-      summary += `Cenário de disputa narrativa exige posicionamento cuidadoso. `
+      summary += `Cobertura dividida entre apoio e críticas — cenário de disputa narrativa.`
     } else {
-      summary += `Cobertura predominantemente factual, sem tendência clara. `
-      summary += `Momento estável que pode ser aproveitado para pautar temas favoráveis. `
+      summary += `Cobertura factual sem tendência clara — momento estável.`
     }
 
-    summary += `\n\nSCORE DE IMAGEM: ${sentimentScore}/100 — `
-    if (sentimentScore >= 70) summary += `capital político em alta.`
-    else if (sentimentScore >= 50) summary += `posição estável.`
-    else if (sentimentScore >= 30) summary += `sinais de desgaste.`
-    else summary += `situação crítica que demanda ação.`
+    summary += ` Score: ${sentimentScore}/100.`
   }
 
   // Recomendações estratégicas
