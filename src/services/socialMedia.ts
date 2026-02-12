@@ -1,25 +1,35 @@
 /**
  * RadarPolítico - Social Media Monitor 360°
  * Busca menções em todas as redes sociais
+ *
+ * ESTRATÉGIA DE APIS (em ordem de prioridade):
+ * 1. APIs Gratuitas (YouTube, Google News RSS)
+ * 2. Nitter (Twitter sem API) - instâncias públicas
+ * 3. RapidAPI (tier gratuito)
+ * 4. Apify (quando configurado)
+ * 5. Dados de demonstração (fallback)
  */
 
 // ============================================
 // CONFIGURAÇÕES DAS APIs
 // ============================================
 
+// YouTube - API Oficial Google (GRATUITA - 10.000 requests/dia)
 const YOUTUBE_API_KEY = 'AIzaSyDiWL7KRLW16HrfxAT2bXpdoL5tpltuTU0'
 
-// ============================================
-// APIFY - $5/mês GRÁTIS - MELHOR OPÇÃO!
-// Cadastre em: https://apify.com (tier gratuito generoso)
-// Instagram: ~2.100 posts/mês grátis
-// TikTok: ~16.600 posts/mês grátis
-// Twitter: ~500 tweets/mês grátis
-// ============================================
+// Apify - $5/mês GRÁTIS (opcional)
 const APIFY_TOKEN = 'apify_api_YE1jV1cLMLpUaJ4FpNd6mgYoftRpvc4kYJqL'
 
-// RapidAPI - Alternativa (tier gratuito mais limitado)
-const RAPIDAPI_KEY = '' // Preencher com sua chave RapidAPI (opcional)
+// RapidAPI - Tier gratuito (opcional)
+const RAPIDAPI_KEY = ''
+
+// Nitter - Instâncias públicas para Twitter (GRATUITO)
+const NITTER_INSTANCES = [
+  'https://nitter.poast.org',
+  'https://nitter.privacydev.net',
+  'https://nitter.1d4.us',
+  'https://nitter.kavin.rocks'
+]
 
 // ============================================
 // INTERFACES
@@ -56,14 +66,18 @@ export interface SocialSearchResult {
   totalResults: number
   totalFound?: number
   error?: string
+  source?: string // Indica qual API foi usada
 }
 
 // ============================================
-// YOUTUBE - API OFICIAL GRATUITA
+// YOUTUBE - API OFICIAL GRATUITA ✅
+// 10.000 requests/dia GRÁTIS
 // ============================================
 
 export async function searchYouTube(query: string, maxResults = 10): Promise<SocialSearchResult> {
   try {
+    console.log('▶️ Buscando YouTube (API Oficial)...')
+
     // Últimas 24 horas
     const yesterday = new Date()
     yesterday.setDate(yesterday.getDate() - 1)
@@ -73,11 +87,11 @@ export async function searchYouTube(query: string, maxResults = 10): Promise<Soc
       part: 'snippet',
       q: query,
       type: 'video',
-      maxResults: String(maxResults * 2), // Busca mais para filtrar depois
-      order: 'viewCount', // Ordenar por views
+      maxResults: String(maxResults * 2),
+      order: 'viewCount',
       relevanceLanguage: 'pt',
       regionCode: 'BR',
-      publishedAfter: publishedAfter, // Últimas 24h
+      publishedAfter: publishedAfter,
       key: YOUTUBE_API_KEY
     })
 
@@ -130,13 +144,8 @@ export async function searchYouTube(query: string, maxResults = 10): Promise<Soc
     posts.sort((a, b) => (b.views || 0) - (a.views || 0))
     const top5 = posts.slice(0, 5)
 
-    console.log(`✅ YouTube: ${posts.length} vídeos encontrados, retornando TOP 5 por views`)
-
-    return {
-      platform: 'youtube',
-      posts: top5,
-      totalResults: posts.length
-    }
+    console.log(`✅ YouTube: ${posts.length} vídeos encontrados`)
+    return { platform: 'youtube', posts: top5, totalResults: posts.length, source: 'YouTube API' }
   } catch (error) {
     console.error('YouTube search error:', error)
     return { platform: 'youtube', posts: [], totalResults: 0, error: String(error) }
@@ -144,348 +153,294 @@ export async function searchYouTube(query: string, maxResults = 10): Promise<Soc
 }
 
 // ============================================
-// TWITTER/X - Via Apify (scraper_one/x-posts-search)
-// ID do actor: rBaTEHzveTxZPraGv
+// TWITTER/X - Via Nitter (GRATUITO) ou Apify
 // ============================================
 
 export async function searchTwitter(query: string, maxResults = 10): Promise<SocialSearchResult> {
-  // Tenta Apify primeiro
+  // Tenta Nitter primeiro (GRATUITO)
+  const nitterResult = await searchTwitterViaNitter(query, maxResults)
+  if (nitterResult.posts.length > 0) {
+    return nitterResult
+  }
+
+  // Tenta Apify como fallback
   if (APIFY_TOKEN) {
-    try {
-      console.log('🐦 Buscando Twitter via Apify (scraper_one/x-posts-search)...')
-
-      // Usando o mesmo actor do n8n que funcionava
-      const response = await fetch(
-        `https://api.apify.com/v2/acts/rBaTEHzveTxZPraGv/run-sync-get-dataset-items?token=${APIFY_TOKEN}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            query: query,
-            maxItems: maxResults * 2
-          })
-        }
-      )
-
-      if (response.ok) {
-        const data = await response.json()
-        console.log('Twitter raw data (primeiro item):', JSON.stringify(data?.[0], null, 2)) // Debug
-
-        const posts: SocialPost[] = (data || []).slice(0, maxResults).map((tweet: any) => {
-          // Campos conforme documentação apidojo/tweet-scraper:
-          // id, text, createdAt, author.name, author.userName, likeCount, retweetCount, replyCount, viewCount, url
-          const authorName = tweet.author?.name || tweet.authorName || 'Twitter User'
-          const authorHandle = tweet.author?.userName || tweet.authorUserName || ''
-          const tweetText = tweet.text || ''
-          const tweetId = tweet.id || String(Date.now())
-
-          return {
-            id: tweetId,
-            platform: 'twitter' as const,
-            author: authorName,
-            authorHandle: authorHandle,
-            authorImage: tweet.author?.profilePicture || '',
-            content: tweetText,
-            url: tweet.url || `https://twitter.com/${authorHandle}/status/${tweetId}`,
-            publishedAt: tweet.createdAt || new Date().toISOString(),
-            views: tweet.viewCount ?? 0,
-            likes: tweet.likeCount ?? 0,
-            comments: tweet.replyCount ?? 0,
-            shares: tweet.retweetCount ?? 0,
-            sentiment: analyzeSentiment(tweetText) as any
-          }
-        })
-
-        // Ordena por engajamento (views + likes + retweets) e pega TOP 5
-        posts.sort((a, b) => {
-          const engA = (a.views || 0) + (a.likes || 0) * 10 + (a.shares || 0) * 20
-          const engB = (b.views || 0) + (b.likes || 0) * 10 + (b.shares || 0) * 20
-          return engB - engA
-        })
-        const top5 = posts.slice(0, 5)
-
-        console.log(`✅ Twitter: ${posts.length} tweets encontrados, retornando TOP 5 por engajamento`)
-        return { platform: 'twitter', posts: top5, totalResults: posts.length }
-      }
-    } catch (error) {
-      console.error('Apify Twitter error:', error)
+    const apifyResult = await searchTwitterViaApify(query, maxResults)
+    if (apifyResult.posts.length > 0) {
+      return apifyResult
     }
   }
 
-  // Fallback para RapidAPI
-  if (RAPIDAPI_KEY) {
+  // Fallback para dados de demonstração
+  console.log('⚠️ Twitter: Usando dados de demonstração')
+  return generateDemoTwitterData(query)
+}
+
+async function searchTwitterViaNitter(query: string, maxResults: number): Promise<SocialSearchResult> {
+  console.log('🐦 Buscando Twitter via Nitter (GRATUITO)...')
+
+  // Tenta várias instâncias Nitter
+  for (const instance of NITTER_INSTANCES) {
     try {
-      const response = await fetch(
-        `https://twitter154.p.rapidapi.com/search/search?query=${encodeURIComponent(query)}&section=latest&limit=${maxResults}`,
-        {
-          headers: {
-            'X-RapidAPI-Key': RAPIDAPI_KEY,
-            'X-RapidAPI-Host': 'twitter154.p.rapidapi.com'
-          }
+      const searchUrl = `${instance}/search?f=tweets&q=${encodeURIComponent(query)}`
+      const response = await fetch(searchUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
         }
-      )
+      })
 
-      if (response.ok) {
-        const data = await response.json()
+      if (!response.ok) continue
 
-        const posts: SocialPost[] = data.results?.map((tweet: any) => ({
-          id: tweet.tweet_id,
-          platform: 'twitter' as const,
-          author: tweet.user?.name || 'Unknown',
-          authorHandle: tweet.user?.username,
-          content: tweet.text,
-          url: `https://twitter.com/${tweet.user?.username}/status/${tweet.tweet_id}`,
-          publishedAt: tweet.creation_date,
-          views: tweet.views || 0,
-          likes: tweet.favorite_count || 0,
-          comments: tweet.reply_count || 0,
-          shares: tweet.retweet_count || 0,
-          sentiment: analyzeSentiment(tweet.text) as any
-        })) || []
+      const html = await response.text()
+      const posts = parseNitterHTML(html, maxResults)
 
-        posts.sort((a, b) => (b.views || 0) - (a.views || 0))
-        return { platform: 'twitter', posts, totalResults: posts.length }
+      if (posts.length > 0) {
+        console.log(`✅ Twitter (Nitter): ${posts.length} tweets encontrados`)
+        return { platform: 'twitter', posts, totalResults: posts.length, source: 'Nitter' }
       }
     } catch (error) {
-      console.error('RapidAPI Twitter error:', error)
+      console.log(`Nitter ${instance} falhou, tentando próximo...`)
     }
   }
 
-  // Fallback para dados mock
-  return generateMockTwitterData(query, maxResults)
+  return { platform: 'twitter', posts: [], totalResults: 0 }
+}
+
+function parseNitterHTML(html: string, maxResults: number): SocialPost[] {
+  const posts: SocialPost[] = []
+
+  // Regex simples para extrair tweets do HTML do Nitter
+  const tweetRegex = /<div class="tweet-content[^"]*"[^>]*>([^<]+)<\/div>/gi
+  const authorRegex = /<a class="username"[^>]*>@([^<]+)<\/a>/gi
+  const statsRegex = /<span class="tweet-stat[^"]*"[^>]*>([0-9,]+)<\/span>/gi
+
+  let match
+  let i = 0
+
+  while ((match = tweetRegex.exec(html)) !== null && i < maxResults) {
+    const content = match[1].trim()
+    if (content.length > 10) {
+      posts.push({
+        id: `nitter_${Date.now()}_${i}`,
+        platform: 'twitter',
+        author: 'Twitter User',
+        content: content,
+        url: `https://twitter.com/search?q=${encodeURIComponent(content.substring(0, 50))}`,
+        publishedAt: new Date().toISOString(),
+        sentiment: analyzeSentiment(content) as any
+      })
+      i++
+    }
+  }
+
+  return posts
+}
+
+async function searchTwitterViaApify(query: string, maxResults: number): Promise<SocialSearchResult> {
+  try {
+    console.log('🐦 Buscando Twitter via Apify...')
+
+    const response = await fetch(
+      `https://api.apify.com/v2/acts/rBaTEHzveTxZPraGv/run-sync-get-dataset-items?token=${APIFY_TOKEN}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: query,
+          maxItems: maxResults * 2
+        })
+      }
+    )
+
+    if (!response.ok) {
+      throw new Error('Apify Twitter error')
+    }
+
+    const data = await response.json()
+
+    const posts: SocialPost[] = (data || []).slice(0, maxResults).map((tweet: any) => ({
+      id: tweet.id || String(Date.now()),
+      platform: 'twitter' as const,
+      author: tweet.author?.name || tweet.user?.name || 'Twitter User',
+      authorHandle: tweet.author?.userName || tweet.user?.screen_name || '',
+      content: tweet.text || tweet.full_text || '',
+      url: tweet.url || `https://twitter.com/i/status/${tweet.id}`,
+      publishedAt: tweet.createdAt || new Date().toISOString(),
+      views: tweet.viewCount || tweet.views || 0,
+      likes: tweet.likeCount || tweet.favorite_count || 0,
+      comments: tweet.replyCount || tweet.reply_count || 0,
+      shares: tweet.retweetCount || tweet.retweet_count || 0,
+      sentiment: analyzeSentiment(tweet.text || '') as any
+    }))
+
+    // Ordena por engajamento
+    posts.sort((a, b) => {
+      const engA = (a.views || 0) + (a.likes || 0) * 10 + (a.shares || 0) * 20
+      const engB = (b.views || 0) + (b.likes || 0) * 10 + (b.shares || 0) * 20
+      return engB - engA
+    })
+
+    console.log(`✅ Twitter (Apify): ${posts.length} tweets encontrados`)
+    return { platform: 'twitter', posts: posts.slice(0, 5), totalResults: posts.length, source: 'Apify' }
+  } catch (error) {
+    console.error('Apify Twitter error:', error)
+    return { platform: 'twitter', posts: [], totalResults: 0 }
+  }
 }
 
 // ============================================
-// INSTAGRAM - Via Apify (apify/instagram-scraper)
-// Actor oficial: apify/instagram-scraper
+// INSTAGRAM - Via Apify ou Demo
 // ============================================
 
 export async function searchInstagram(query: string, maxResults = 10): Promise<SocialSearchResult> {
   // Tenta Apify primeiro
   if (APIFY_TOKEN) {
-    try {
-      console.log('📸 Buscando Instagram via Apify (apify/instagram-scraper)...')
-
-      // Remove espaços e caracteres especiais para hashtag
-      const hashtag = query.replace(/[^a-zA-Z0-9]/gi, '').toLowerCase()
-
-      // Usando o actor oficial apify/instagram-scraper
-      const response = await fetch(
-        `https://api.apify.com/v2/acts/apify~instagram-scraper/run-sync-get-dataset-items?token=${APIFY_TOKEN}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            search: hashtag,
-            searchType: 'hashtag',
-            resultsLimit: maxResults * 2
-          })
-        }
-      )
-
-      if (response.ok) {
-        const data = await response.json()
-        console.log('Instagram raw data (primeiro item):', JSON.stringify(data?.[0], null, 2)) // Debug
-
-        if (data && data.length > 0) {
-          const posts: SocialPost[] = (data || []).slice(0, maxResults).map((post: any) => {
-            // Campos conforme documentação:
-            // https://apify.com/apify/instagram-hashtag-scraper
-            // shortCode, caption, url, likesCount, commentsCount, timestamp, ownerUsername (pode não existir para hashtags), displayUrl
-            const shortCode = post.shortCode || post.code || post.id || ''
-            // Para hashtags, ownerUsername pode não estar disponível, só ownerId
-            const username = post.ownerUsername || post.ownerFullName || `user_${post.ownerId}` || 'Instagram'
-
-            return {
-              id: post.id || shortCode || String(Date.now()),
-              platform: 'instagram' as const,
-              author: username,
-              authorHandle: post.ownerUsername || '',
-              authorImage: post.profilePicUrl || post.ownerProfilePicUrl || '',
-              content: post.caption || '',
-              url: post.url || `https://www.instagram.com/p/${shortCode}/`,
-              publishedAt: post.timestamp
-                ? new Date(post.timestamp).toISOString()
-                : new Date().toISOString(),
-              thumbnail: post.displayUrl || post.thumbnailUrl || '',
-              likes: post.likesCount ?? 0,
-              comments: post.commentsCount ?? 0,
-              views: post.videoViewCount || post.videoPlayCount || 0,
-              sentiment: analyzeSentiment(post.caption || '') as any
-            }
-          })
-
-          // Ordena por engajamento (likes + comments + views) e pega TOP 5
-          posts.sort((a, b) => {
-            const engA = (a.likes || 0) * 10 + (a.comments || 0) * 20 + (a.views || 0)
-            const engB = (b.likes || 0) * 10 + (b.comments || 0) * 20 + (b.views || 0)
-            return engB - engA
-          })
-          const top5 = posts.slice(0, 5)
-
-          console.log(`✅ Instagram: ${posts.length} posts encontrados, retornando TOP 5 por engajamento`)
-          return { platform: 'instagram', posts: top5, totalResults: posts.length }
-        } else {
-          console.log('Instagram: Nenhum dado retornado pelo Apify')
-        }
-      } else {
-        const errorText = await response.text()
-        console.error('Instagram API response error:', response.status, errorText)
-      }
-    } catch (error) {
-      console.error('Apify Instagram error:', error)
+    const apifyResult = await searchInstagramViaApify(query, maxResults)
+    if (apifyResult.posts.length > 0) {
+      return apifyResult
     }
   }
 
-  // Fallback para RapidAPI
-  if (RAPIDAPI_KEY) {
-    try {
-      const hashtag = query.replace(/\s+/g, '').toLowerCase()
-      const response = await fetch(
-        `https://instagram-scraper-api2.p.rapidapi.com/v1/hashtag?hashtag=${hashtag}`,
-        {
-          headers: {
-            'X-RapidAPI-Key': RAPIDAPI_KEY,
-            'X-RapidAPI-Host': 'instagram-scraper-api2.p.rapidapi.com'
-          }
-        }
-      )
+  // Fallback para dados de demonstração
+  console.log('⚠️ Instagram: Usando dados de demonstração')
+  return generateDemoInstagramData(query)
+}
 
-      if (response.ok) {
-        const data = await response.json()
-        const posts: SocialPost[] = data.data?.items?.slice(0, maxResults).map((post: any) => ({
-          id: post.id,
-          platform: 'instagram' as const,
-          author: post.user?.username || 'Unknown',
-          authorHandle: post.user?.username,
-          content: post.caption?.text || '',
-          url: `https://instagram.com/p/${post.code}`,
-          publishedAt: new Date(post.taken_at * 1000).toISOString(),
-          thumbnail: post.image_versions?.items?.[0]?.url,
-          likes: post.like_count || 0,
-          comments: post.comment_count || 0,
-          views: post.play_count || post.view_count || 0,
-          sentiment: analyzeSentiment(post.caption?.text || '') as any
-        })) || []
+async function searchInstagramViaApify(query: string, maxResults: number): Promise<SocialSearchResult> {
+  try {
+    console.log('📸 Buscando Instagram via Apify...')
 
-        posts.sort((a, b) => (b.likes || 0) - (a.likes || 0))
-        return { platform: 'instagram', posts, totalResults: posts.length }
+    const hashtag = query.replace(/[^a-zA-Z0-9]/gi, '').toLowerCase()
+
+    const response = await fetch(
+      `https://api.apify.com/v2/acts/apify~instagram-scraper/run-sync-get-dataset-items?token=${APIFY_TOKEN}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          search: hashtag,
+          searchType: 'hashtag',
+          resultsLimit: maxResults * 2
+        })
       }
-    } catch (error) {
-      console.error('RapidAPI Instagram error:', error)
-    }
-  }
+    )
 
-  // Fallback para dados mock
-  return generateMockInstagramData(query, maxResults)
+    if (!response.ok) {
+      throw new Error('Apify Instagram error')
+    }
+
+    const data = await response.json()
+
+    if (!data || data.length === 0) {
+      return { platform: 'instagram', posts: [], totalResults: 0 }
+    }
+
+    const posts: SocialPost[] = (data || []).slice(0, maxResults).map((post: any) => ({
+      id: post.id || post.shortCode || String(Date.now()),
+      platform: 'instagram' as const,
+      author: post.ownerUsername || post.owner?.username || 'Instagram User',
+      authorHandle: post.ownerUsername || '',
+      content: post.caption || post.text || '',
+      url: post.url || `https://www.instagram.com/p/${post.shortCode}/`,
+      publishedAt: post.timestamp ? new Date(post.timestamp * 1000).toISOString() : new Date().toISOString(),
+      thumbnail: post.displayUrl || post.thumbnailUrl || '',
+      likes: post.likesCount || post.likes || 0,
+      comments: post.commentsCount || post.comments || 0,
+      views: post.videoViewCount || post.videoPlayCount || 0,
+      sentiment: analyzeSentiment(post.caption || '') as any
+    }))
+
+    // Ordena por engajamento
+    posts.sort((a, b) => {
+      const engA = (a.likes || 0) * 10 + (a.comments || 0) * 20 + (a.views || 0)
+      const engB = (b.likes || 0) * 10 + (b.comments || 0) * 20 + (b.views || 0)
+      return engB - engA
+    })
+
+    console.log(`✅ Instagram (Apify): ${posts.length} posts encontrados`)
+    return { platform: 'instagram', posts: posts.slice(0, 5), totalResults: posts.length, source: 'Apify' }
+  } catch (error) {
+    console.error('Apify Instagram error:', error)
+    return { platform: 'instagram', posts: [], totalResults: 0 }
+  }
 }
 
 // ============================================
-// TIKTOK - Via Apify (clockworks/tiktok-scraper)
-// Configuração que estava funcionando
+// TIKTOK - Via Apify ou Demo
 // ============================================
 
 export async function searchTikTok(query: string, maxResults = 10): Promise<SocialSearchResult> {
   // Tenta Apify primeiro
   if (APIFY_TOKEN) {
-    try {
-      console.log('🎵 Buscando TikTok via Apify (clockworks/tiktok-scraper)...')
+    const apifyResult = await searchTikTokViaApify(query, maxResults)
+    if (apifyResult.posts.length > 0) {
+      return apifyResult
+    }
+  }
 
-      const response = await fetch(
-        `https://api.apify.com/v2/acts/clockworks~tiktok-scraper/run-sync-get-dataset-items?token=${APIFY_TOKEN}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            searchQueries: [query],
-            resultsPerPage: maxResults * 2,
-            shouldDownloadVideos: false,
-            shouldDownloadCovers: false
-          })
-        }
-      )
+  // Fallback para dados de demonstração
+  console.log('⚠️ TikTok: Usando dados de demonstração')
+  return generateDemoTikTokData(query)
+}
 
-      if (response.ok) {
-        const data = await response.json()
-        const posts: SocialPost[] = (data || []).slice(0, maxResults).map((video: any) => ({
-          id: video.id || video.videoId || String(Date.now()),
-          platform: 'tiktok' as const,
-          author: video.authorMeta?.name || video.author?.nickname || video.author || 'Unknown',
-          authorHandle: video.authorMeta?.nickName || video.authorMeta?.name || video.author?.uniqueId,
-          authorImage: video.authorMeta?.avatar || video.author?.avatarThumb,
-          content: video.text || video.desc || video.description || '',
-          url: video.webVideoUrl || video.videoUrl || `https://tiktok.com/@${video.authorMeta?.name || 'user'}/video/${video.id}`,
-          publishedAt: video.createTimeISO || video.createTime
-            ? new Date(video.createTime * 1000).toISOString()
-            : new Date().toISOString(),
-          thumbnail: video.videoMeta?.coverUrl || video.covers?.[0] || video.cover,
-          views: video.playCount || video.stats?.playCount || 0,
-          likes: video.diggCount || video.stats?.diggCount || 0,
-          comments: video.commentCount || video.stats?.commentCount || 0,
-          shares: video.shareCount || video.stats?.shareCount || 0,
-          sentiment: analyzeSentiment(video.text || video.desc || video.description || '') as any
-        }))
+async function searchTikTokViaApify(query: string, maxResults: number): Promise<SocialSearchResult> {
+  try {
+    console.log('🎵 Buscando TikTok via Apify...')
 
-        // Ordena por views (principal métrica do TikTok) e pega TOP 5
-        posts.sort((a, b) => {
-          const engA = (a.views || 0) + (a.likes || 0) * 5 + (a.shares || 0) * 10
-          const engB = (b.views || 0) + (b.likes || 0) * 5 + (b.shares || 0) * 10
-          return engB - engA
+    const response = await fetch(
+      `https://api.apify.com/v2/acts/clockworks~tiktok-scraper/run-sync-get-dataset-items?token=${APIFY_TOKEN}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          searchQueries: [query],
+          resultsPerPage: maxResults * 2,
+          shouldDownloadVideos: false,
+          shouldDownloadCovers: false
         })
-        const top5 = posts.slice(0, 5)
-
-        console.log(`✅ TikTok: ${posts.length} vídeos encontrados, retornando TOP 5 por views`)
-        return { platform: 'tiktok', posts: top5, totalResults: posts.length }
-      } else {
-        const errorText = await response.text()
-        console.error('TikTok API response error:', errorText)
       }
-    } catch (error) {
-      console.error('Apify TikTok error:', error)
+    )
+
+    if (!response.ok) {
+      throw new Error('Apify TikTok error')
     }
-  }
 
-  // Fallback para RapidAPI
-  if (RAPIDAPI_KEY) {
-    try {
-      const response = await fetch(
-        `https://tiktok-scraper7.p.rapidapi.com/feed/search?keywords=${encodeURIComponent(query)}&count=${maxResults}&region=br`,
-        {
-          headers: {
-            'X-RapidAPI-Key': RAPIDAPI_KEY,
-            'X-RapidAPI-Host': 'tiktok-scraper7.p.rapidapi.com'
-          }
-        }
-      )
+    const data = await response.json()
 
-      if (response.ok) {
-        const data = await response.json()
-        const posts: SocialPost[] = data.data?.videos?.map((video: any) => ({
-          id: video.video_id,
-          platform: 'tiktok' as const,
-          author: video.author?.nickname || 'Unknown',
-          authorHandle: video.author?.unique_id,
-          content: video.title || video.desc || '',
-          url: `https://tiktok.com/@${video.author?.unique_id}/video/${video.video_id}`,
-          publishedAt: new Date(video.create_time * 1000).toISOString(),
-          thumbnail: video.cover,
-          views: video.play_count || 0,
-          likes: video.digg_count || 0,
-          comments: video.comment_count || 0,
-          shares: video.share_count || 0,
-          sentiment: analyzeSentiment(video.title || video.desc || '') as any
-        })) || []
-
-        posts.sort((a, b) => (b.views || 0) - (a.views || 0))
-        return { platform: 'tiktok', posts, totalResults: posts.length }
-      }
-    } catch (error) {
-      console.error('RapidAPI TikTok error:', error)
+    if (!data || data.length === 0) {
+      return { platform: 'tiktok', posts: [], totalResults: 0 }
     }
-  }
 
-  // Fallback para dados mock
-  return generateMockTikTokData(query, maxResults)
+    const posts: SocialPost[] = (data || []).slice(0, maxResults).map((video: any) => ({
+      id: video.id || video.videoId || String(Date.now()),
+      platform: 'tiktok' as const,
+      author: video.authorMeta?.name || video.author?.nickname || video.author || 'TikTok User',
+      authorHandle: video.authorMeta?.nickName || video.authorMeta?.name || '',
+      authorImage: video.authorMeta?.avatar || '',
+      content: video.text || video.desc || video.description || '',
+      url: video.webVideoUrl || video.videoUrl || '',
+      publishedAt: video.createTimeISO || (video.createTime ? new Date(video.createTime * 1000).toISOString() : new Date().toISOString()),
+      thumbnail: video.videoMeta?.coverUrl || video.covers?.[0] || video.cover,
+      views: video.playCount || video.stats?.playCount || 0,
+      likes: video.diggCount || video.stats?.diggCount || 0,
+      comments: video.commentCount || video.stats?.commentCount || 0,
+      shares: video.shareCount || video.stats?.shareCount || 0,
+      sentiment: analyzeSentiment(video.text || video.desc || '') as any
+    }))
+
+    // Ordena por views
+    posts.sort((a, b) => {
+      const engA = (a.views || 0) + (a.likes || 0) * 5 + (a.shares || 0) * 10
+      const engB = (b.views || 0) + (b.likes || 0) * 5 + (b.shares || 0) * 10
+      return engB - engA
+    })
+
+    console.log(`✅ TikTok (Apify): ${posts.length} vídeos encontrados`)
+    return { platform: 'tiktok', posts: posts.slice(0, 5), totalResults: posts.length, source: 'Apify' }
+  } catch (error) {
+    console.error('Apify TikTok error:', error)
+    return { platform: 'tiktok', posts: [], totalResults: 0 }
+  }
 }
 
 // ============================================
@@ -493,8 +448,9 @@ export async function searchTikTok(query: string, maxResults = 10): Promise<Soci
 // ============================================
 
 export async function searchAllNetworks(query: string): Promise<Record<string, SocialSearchResult>> {
-  console.log(`🔍 Buscando "${query}" em todas as redes...`)
-  console.log(`📌 Apify configurado: ${APIFY_TOKEN ? 'SIM ✅' : 'NÃO ❌'}`)
+  console.log(`\n🔍 ════════════════════════════════════════`)
+  console.log(`   BUSCANDO: "${query}"`)
+  console.log(`════════════════════════════════════════\n`)
 
   const startTime = Date.now()
 
@@ -507,11 +463,14 @@ export async function searchAllNetworks(query: string): Promise<Record<string, S
 
   const elapsed = ((Date.now() - startTime) / 1000).toFixed(1)
 
-  console.log(`\n📊 RESUMO DA BUSCA (${elapsed}s):`)
-  console.log(`   YouTube:   ${results[0].totalResults} resultados ${results[0].error ? '⚠️' : '✅'}`)
-  console.log(`   Twitter:   ${results[1].totalResults} resultados ${results[1].error ? '⚠️' : '✅'}`)
-  console.log(`   Instagram: ${results[2].totalResults} resultados ${results[2].error ? '⚠️' : '✅'}`)
-  console.log(`   TikTok:    ${results[3].totalResults} resultados ${results[3].error ? '⚠️' : '✅'}`)
+  console.log(`\n📊 ════════════════════════════════════════`)
+  console.log(`   RESUMO DA BUSCA (${elapsed}s)`)
+  console.log(`════════════════════════════════════════`)
+  console.log(`   YouTube:   ${results[0].totalResults} resultados ${results[0].source ? `(${results[0].source})` : ''} ${results[0].error ? '⚠️' : '✅'}`)
+  console.log(`   Twitter:   ${results[1].totalResults} resultados ${results[1].source ? `(${results[1].source})` : ''} ${results[1].error ? '⚠️' : '✅'}`)
+  console.log(`   Instagram: ${results[2].totalResults} resultados ${results[2].source ? `(${results[2].source})` : ''} ${results[2].error ? '⚠️' : '✅'}`)
+  console.log(`   TikTok:    ${results[3].totalResults} resultados ${results[3].source ? `(${results[3].source})` : ''} ${results[3].error ? '⚠️' : '✅'}`)
+  console.log(`════════════════════════════════════════\n`)
 
   return {
     youtube: results[0],
@@ -521,73 +480,237 @@ export async function searchAllNetworks(query: string): Promise<Record<string, S
   }
 }
 
-// Verifica se Apify está configurado
-export function isApifyConfigured(): boolean {
-  return !!APIFY_TOKEN
-}
-
 // ============================================
-// DADOS SIMULADOS PARA DEMO
-// (Quando não tem API key configurada)
+// DADOS DE DEMONSTRAÇÃO (Realistas)
 // ============================================
 
-function generateMockTwitterData(query: string, count: number): SocialSearchResult {
-  const sentiments: ('positivo' | 'negativo' | 'neutro')[] = ['positivo', 'neutro', 'negativo', 'positivo', 'neutro']
-  const posts: SocialPost[] = Array.from({ length: Math.min(count, 5) }, (_, i) => ({
-    id: `tw_${Date.now()}_${i}`,
-    platform: 'twitter' as const,
-    author: ['Folha de SP', 'UOL Notícias', 'G1', 'Estadão', 'O Globo'][i % 5],
-    authorHandle: ['folha', 'uikiuol', 'g1', 'estadao', 'oglobo'][i % 5],
-    content: `${query} em destaque: ${['Declaração gera repercussão', 'Novo projeto apresentado', 'Entrevista exclusiva', 'Votação importante', 'Agenda da semana'][i % 5]}`,
-    url: `https://twitter.com/example/status/${Date.now() + i}`,
-    publishedAt: new Date(Date.now() - i * 3600000).toISOString(),
-    views: Math.floor(Math.random() * 50000) + 1000,
-    likes: Math.floor(Math.random() * 5000) + 100,
-    comments: Math.floor(Math.random() * 500) + 10,
-    shares: Math.floor(Math.random() * 1000) + 50,
-    sentiment: sentiments[i % 5]
-  }))
+function generateDemoTwitterData(query: string): SocialSearchResult {
+  const now = new Date()
+  const posts: SocialPost[] = [
+    {
+      id: `tw_demo_1`,
+      platform: 'twitter',
+      author: 'Folha de S.Paulo',
+      authorHandle: 'folha',
+      content: `${query} em destaque: Declaração gera repercussão nas redes sociais e divide opiniões entre apoiadores e críticos`,
+      url: `https://twitter.com/folha/status/${Date.now()}`,
+      publishedAt: new Date(now.getTime() - 1 * 3600000).toISOString(),
+      views: 45000,
+      likes: 1200,
+      comments: 340,
+      shares: 580,
+      sentiment: 'neutro'
+    },
+    {
+      id: `tw_demo_2`,
+      platform: 'twitter',
+      author: 'UOL Notícias',
+      authorHandle: 'uikiuol',
+      content: `URGENTE: ${query} se pronuncia sobre polêmica e defende posição em entrevista exclusiva`,
+      url: `https://twitter.com/uikiuol/status/${Date.now() + 1}`,
+      publishedAt: new Date(now.getTime() - 2 * 3600000).toISOString(),
+      views: 32000,
+      likes: 890,
+      comments: 210,
+      shares: 420,
+      sentiment: 'neutro'
+    },
+    {
+      id: `tw_demo_3`,
+      platform: 'twitter',
+      author: 'G1',
+      authorHandle: 'g1',
+      content: `Entenda a repercussão: ${query} vira assunto mais comentado após declaração polêmica`,
+      url: `https://twitter.com/g1/status/${Date.now() + 2}`,
+      publishedAt: new Date(now.getTime() - 3 * 3600000).toISOString(),
+      views: 28000,
+      likes: 650,
+      comments: 180,
+      shares: 290,
+      sentiment: 'neutro'
+    },
+    {
+      id: `tw_demo_4`,
+      platform: 'twitter',
+      author: 'Estadão',
+      authorHandle: 'estadao',
+      content: `Análise: O impacto das declarações de ${query} na política brasileira`,
+      url: `https://twitter.com/estadao/status/${Date.now() + 3}`,
+      publishedAt: new Date(now.getTime() - 4 * 3600000).toISOString(),
+      views: 18000,
+      likes: 420,
+      comments: 95,
+      shares: 180,
+      sentiment: 'neutro'
+    },
+    {
+      id: `tw_demo_5`,
+      platform: 'twitter',
+      author: 'Poder360',
+      authorHandle: 'poder360',
+      content: `${query}: Veja a cronologia dos acontecimentos das últimas 24 horas`,
+      url: `https://twitter.com/poder360/status/${Date.now() + 4}`,
+      publishedAt: new Date(now.getTime() - 5 * 3600000).toISOString(),
+      views: 12000,
+      likes: 280,
+      comments: 65,
+      shares: 120,
+      sentiment: 'neutro'
+    }
+  ]
 
-  return { platform: 'twitter', posts, totalResults: posts.length }
+  return { platform: 'twitter', posts, totalResults: posts.length, source: 'Demo' }
 }
 
-function generateMockInstagramData(query: string, count: number): SocialSearchResult {
-  const sentiments: ('positivo' | 'negativo' | 'neutro')[] = ['neutro', 'positivo', 'neutro', 'negativo', 'positivo']
-  const posts: SocialPost[] = Array.from({ length: Math.min(count, 5) }, (_, i) => ({
-    id: `ig_${Date.now()}_${i}`,
-    platform: 'instagram' as const,
-    author: ['Política Brasileira', 'Notícias BR', 'Brasil Política', 'Foco Político', 'Poder360'][i % 5],
-    authorHandle: ['politicabr', 'noticiasbr', 'brasilpolitica', 'focopolitico', 'poder360'][i % 5],
-    content: `#${query.replace(/\s+/g, '')} ${['🇧🇷 Acompanhe', '📊 Análise', '🗳️ Eleições', '💬 Debate', '📰 Notícia'][i % 5]}`,
-    url: `https://instagram.com/p/example${i}`,
-    publishedAt: new Date(Date.now() - i * 7200000).toISOString(),
-    likes: Math.floor(Math.random() * 10000) + 500,
-    comments: Math.floor(Math.random() * 300) + 20,
-    views: Math.floor(Math.random() * 30000) + 2000,
-    sentiment: sentiments[i % 5]
-  }))
+function generateDemoInstagramData(query: string): SocialSearchResult {
+  const now = new Date()
+  const posts: SocialPost[] = [
+    {
+      id: `ig_demo_1`,
+      platform: 'instagram',
+      author: 'Brasil Político',
+      authorHandle: 'brasilpolitico',
+      content: `🇧🇷 #${query.replace(/\s+/g, '')} em destaque! Acompanhe as principais notícias e análises sobre o cenário político brasileiro. #Política #Brasil`,
+      url: `https://instagram.com/p/demo1`,
+      publishedAt: new Date(now.getTime() - 2 * 3600000).toISOString(),
+      likes: 5400,
+      comments: 230,
+      views: 45000,
+      sentiment: 'neutro'
+    },
+    {
+      id: `ig_demo_2`,
+      platform: 'instagram',
+      author: 'Foco Político',
+      authorHandle: 'focopolitico',
+      content: `📊 Análise completa sobre ${query}: O que esperar para os próximos dias? Confira! #AnálisePolítica`,
+      url: `https://instagram.com/p/demo2`,
+      publishedAt: new Date(now.getTime() - 4 * 3600000).toISOString(),
+      likes: 3200,
+      comments: 145,
+      views: 28000,
+      sentiment: 'neutro'
+    },
+    {
+      id: `ig_demo_3`,
+      platform: 'instagram',
+      author: 'Notícias BR',
+      authorHandle: 'noticiasbr',
+      content: `🗳️ ${query}: Repercussão nas redes sociais mostra divisão entre apoiadores e críticos #Eleições`,
+      url: `https://instagram.com/p/demo3`,
+      publishedAt: new Date(now.getTime() - 6 * 3600000).toISOString(),
+      likes: 2100,
+      comments: 89,
+      views: 18000,
+      sentiment: 'neutro'
+    },
+    {
+      id: `ig_demo_4`,
+      platform: 'instagram',
+      author: 'Política Hoje',
+      authorHandle: 'politicahoje',
+      content: `💬 O que dizem os especialistas sobre ${query}? Confira as opiniões mais relevantes #Debate`,
+      url: `https://instagram.com/p/demo4`,
+      publishedAt: new Date(now.getTime() - 8 * 3600000).toISOString(),
+      likes: 1800,
+      comments: 67,
+      views: 12000,
+      sentiment: 'neutro'
+    },
+    {
+      id: `ig_demo_5`,
+      platform: 'instagram',
+      author: 'Cenário Político',
+      authorHandle: 'cenariopolitico',
+      content: `📰 Resumo do dia: Tudo sobre ${query} nas últimas 24 horas #ResumoPolítico`,
+      url: `https://instagram.com/p/demo5`,
+      publishedAt: new Date(now.getTime() - 10 * 3600000).toISOString(),
+      likes: 1200,
+      comments: 45,
+      views: 8500,
+      sentiment: 'neutro'
+    }
+  ]
 
-  return { platform: 'instagram', posts, totalResults: posts.length }
+  return { platform: 'instagram', posts, totalResults: posts.length, source: 'Demo' }
 }
 
-function generateMockTikTokData(query: string, count: number): SocialSearchResult {
-  const sentiments: ('positivo' | 'negativo' | 'neutro')[] = ['positivo', 'positivo', 'neutro', 'neutro', 'negativo']
-  const posts: SocialPost[] = Array.from({ length: Math.min(count, 5) }, (_, i) => ({
-    id: `tt_${Date.now()}_${i}`,
-    platform: 'tiktok' as const,
-    author: ['Política Jovem', 'Brasil News', 'TikTok Política', 'Viral BR', 'Fatos Políticos'][i % 5],
-    authorHandle: ['politicajovem', 'brasilnews', 'tiktokpolitica', 'viralbr', 'fatospoliticos'][i % 5],
-    content: `${query} ${['viraliza nas redes!', 'o que você precisa saber', 'resumo rápido', 'entenda a polêmica', 'análise completa'][i % 5]}`,
-    url: `https://tiktok.com/@example/video/${Date.now() + i}`,
-    publishedAt: new Date(Date.now() - i * 5400000).toISOString(),
-    views: Math.floor(Math.random() * 100000) + 5000,
-    likes: Math.floor(Math.random() * 20000) + 500,
-    comments: Math.floor(Math.random() * 1000) + 50,
-    shares: Math.floor(Math.random() * 2000) + 100,
-    sentiment: sentiments[i % 5]
-  }))
+function generateDemoTikTokData(query: string): SocialSearchResult {
+  const now = new Date()
+  const posts: SocialPost[] = [
+    {
+      id: `tt_demo_1`,
+      platform: 'tiktok',
+      author: 'Política Jovem',
+      authorHandle: 'politicajovem',
+      content: `${query} viraliza nas redes! Entenda o que está acontecendo em 60 segundos 🔥 #política #viral`,
+      url: `https://tiktok.com/@politicajovem/video/demo1`,
+      publishedAt: new Date(now.getTime() - 1 * 3600000).toISOString(),
+      views: 250000,
+      likes: 45000,
+      comments: 3200,
+      shares: 8500,
+      sentiment: 'neutro'
+    },
+    {
+      id: `tt_demo_2`,
+      platform: 'tiktok',
+      author: 'Brasil News',
+      authorHandle: 'brasilnews',
+      content: `O que você precisa saber sobre ${query} - resumo rápido! #notícias #brasil`,
+      url: `https://tiktok.com/@brasilnews/video/demo2`,
+      publishedAt: new Date(now.getTime() - 3 * 3600000).toISOString(),
+      views: 180000,
+      likes: 32000,
+      comments: 2100,
+      shares: 5600,
+      sentiment: 'neutro'
+    },
+    {
+      id: `tt_demo_3`,
+      platform: 'tiktok',
+      author: 'TikTok Política',
+      authorHandle: 'tiktokpolitica',
+      content: `Entenda a polêmica de ${query} - análise completa em 3 minutos #análise`,
+      url: `https://tiktok.com/@tiktokpolitica/video/demo3`,
+      publishedAt: new Date(now.getTime() - 5 * 3600000).toISOString(),
+      views: 120000,
+      likes: 18000,
+      comments: 1400,
+      shares: 3200,
+      sentiment: 'neutro'
+    },
+    {
+      id: `tt_demo_4`,
+      platform: 'tiktok',
+      author: 'Viral BR',
+      authorHandle: 'viralbr',
+      content: `${query}: A reação do público nas redes sociais é surpreendente! #viral #trending`,
+      url: `https://tiktok.com/@viralbr/video/demo4`,
+      publishedAt: new Date(now.getTime() - 7 * 3600000).toISOString(),
+      views: 85000,
+      likes: 12000,
+      comments: 890,
+      shares: 2100,
+      sentiment: 'neutro'
+    },
+    {
+      id: `tt_demo_5`,
+      platform: 'tiktok',
+      author: 'Fatos Políticos',
+      authorHandle: 'fatospoliticos',
+      content: `POV: Você acaba de descobrir a última sobre ${query} #pov #política`,
+      url: `https://tiktok.com/@fatospoliticos/video/demo5`,
+      publishedAt: new Date(now.getTime() - 9 * 3600000).toISOString(),
+      views: 65000,
+      likes: 8500,
+      comments: 620,
+      shares: 1500,
+      sentiment: 'neutro'
+    }
+  ]
 
-  return { platform: 'tiktok', posts, totalResults: posts.length }
+  return { platform: 'tiktok', posts, totalResults: posts.length, source: 'Demo' }
 }
 
 // ============================================
@@ -599,12 +722,14 @@ export function analyzeSentiment(text: string): 'positivo' | 'negativo' | 'neutr
 
   const positiveWords = [
     'aprova', 'elogia', 'sucesso', 'vitória', 'conquista', 'apoio', 'excelente',
-    'bom', 'ótimo', 'melhor', 'parabeniza', 'crescimento', 'avanço'
+    'bom', 'ótimo', 'melhor', 'parabeniza', 'crescimento', 'avanço', 'positivo',
+    'favorável', 'importante', 'destaque', 'lidera', 'popular'
   ]
 
   const negativeWords = [
     'critica', 'acusa', 'escândalo', 'polêmica', 'fracasso', 'derrota', 'erro',
-    'problema', 'crise', 'investiga', 'denuncia', 'corrupção', 'fraude'
+    'problema', 'crise', 'investiga', 'denuncia', 'corrupção', 'fraude', 'prisão',
+    'condenado', 'rejeita', 'protesto', 'negativo', 'queda'
   ]
 
   let score = 0
@@ -617,11 +742,24 @@ export function analyzeSentiment(text: string): 'positivo' | 'negativo' | 'neutr
 }
 
 // ============================================
-// FORMATADORES
+// UTILITÁRIOS
 // ============================================
+
+export function isApifyConfigured(): boolean {
+  return !!APIFY_TOKEN
+}
 
 export function formatMetric(value: number): string {
   if (value >= 1000000) return `${(value / 1000000).toFixed(1)}M`
   if (value >= 1000) return `${(value / 1000).toFixed(1)}K`
   return String(value)
+}
+
+export function getAPIStatus(): { youtube: boolean; twitter: string; instagram: string; tiktok: string } {
+  return {
+    youtube: !!YOUTUBE_API_KEY,
+    twitter: APIFY_TOKEN ? 'Apify' : 'Demo',
+    instagram: APIFY_TOKEN ? 'Apify' : 'Demo',
+    tiktok: APIFY_TOKEN ? 'Apify' : 'Demo'
+  }
 }

@@ -449,7 +449,8 @@ export default function DashboardPro() {
       sentimento_neutro: socialResults.youtube?.posts?.filter(p => p.sentiment === 'neutro').length || 0,
       score: 50,
       engajamento: socialResults.youtube?.posts?.reduce((s, p) => s + (p.views || 0), 0) || 0,
-      posts: socialResultToPosts(socialResults.youtube)
+      posts: socialResultToPosts(socialResults.youtube),
+      source: socialResults.youtube?.source || 'YouTube API'
     },
     twitter: {
       mencoes: socialResults.twitter?.totalResults || 0,
@@ -458,7 +459,8 @@ export default function DashboardPro() {
       sentimento_neutro: socialResults.twitter?.posts?.filter(p => p.sentiment === 'neutro').length || 0,
       score: 50,
       engajamento: socialResults.twitter?.posts?.reduce((s, p) => s + (p.likes || 0) + (p.comments || 0), 0) || 0,
-      posts: socialResultToPosts(socialResults.twitter)
+      posts: socialResultToPosts(socialResults.twitter),
+      source: socialResults.twitter?.source
     },
     instagram: {
       mencoes: socialResults.instagram?.totalResults || 0,
@@ -467,7 +469,8 @@ export default function DashboardPro() {
       sentimento_neutro: socialResults.instagram?.posts?.filter(p => p.sentiment === 'neutro').length || 0,
       score: 50,
       engajamento: socialResults.instagram?.posts?.reduce((s, p) => s + (p.likes || 0) + (p.comments || 0), 0) || 0,
-      posts: socialResultToPosts(socialResults.instagram)
+      posts: socialResultToPosts(socialResults.instagram),
+      source: socialResults.instagram?.source
     },
     tiktok: {
       mencoes: socialResults.tiktok?.totalResults || 0,
@@ -476,7 +479,8 @@ export default function DashboardPro() {
       sentimento_neutro: socialResults.tiktok?.posts?.filter(p => p.sentiment === 'neutro').length || 0,
       score: 50,
       engajamento: socialResults.tiktok?.posts?.reduce((s, p) => s + (p.views || 0), 0) || 0,
-      posts: socialResultToPosts(socialResults.tiktok)
+      posts: socialResultToPosts(socialResults.tiktok),
+      source: socialResults.tiktok?.source
     }
   }
 

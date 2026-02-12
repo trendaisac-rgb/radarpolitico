@@ -40,6 +40,7 @@ export interface NetworkMetrics {
   tendencia?: 'subindo' | 'descendo' | 'estavel'
   variacao_percentual?: number
   posts?: SocialPost[]
+  source?: string // Fonte dos dados (Nitter, Apify, Demo, YouTube API)
 }
 
 interface NetworkCardProps {
@@ -84,6 +85,15 @@ export function NetworkCard({ rede, data, icon, showPosts = true, maxPosts = 3 }
   const tendencia = data.tendencia
   const variacao = data.variacao_percentual || 0
   const posts = data.posts || []
+  const source = data.source
+
+  // Configuração de badges de fonte
+  const sourceConfig: Record<string, { label: string; color: string }> = {
+    'YouTube API': { label: 'API', color: 'bg-green-500/20 text-green-600 border-green-500/30' },
+    'Apify': { label: 'Apify', color: 'bg-purple-500/20 text-purple-600 border-purple-500/30' },
+    'Nitter': { label: 'Free', color: 'bg-cyan-500/20 text-cyan-600 border-cyan-500/30' },
+    'Demo': { label: 'Demo', color: 'bg-amber-500/20 text-amber-600 border-amber-500/30' }
+  }
 
   // Calcula porcentagens
   const total = positivo + negativo + neutro
@@ -109,9 +119,19 @@ export function NetworkCard({ rede, data, icon, showPosts = true, maxPosts = 3 }
           <div className="flex items-center gap-2">
             <span className="text-2xl">{icon}</span>
             <div>
-              <span className="font-semibold">{label}</span>
+              <div className="flex items-center gap-2">
+                <span className="font-semibold">{label}</span>
+                {source && sourceConfig[source] && (
+                  <Badge
+                    variant="outline"
+                    className={`text-[10px] px-1.5 py-0 h-4 ${sourceConfig[source].color}`}
+                  >
+                    {sourceConfig[source].label}
+                  </Badge>
+                )}
+              </div>
               {mencoes > 0 && (
-                <span className="text-xs text-muted-foreground ml-2">
+                <span className="text-xs text-muted-foreground">
                   {mencoes} menções
                 </span>
               )}
