@@ -204,61 +204,18 @@ export async function searchPoliticianNews(
 }
 
 /**
- * Remove artigos duplicados baseado no título normalizado
- * Usa similaridade para pegar títulos quase iguais
+ * Remove artigos duplicados baseado na URL
  */
 function removeDuplicates(articles: NewsArticle[]): NewsArticle[] {
-  const seen = new Map<string, NewsArticle>()
-
-  articles.forEach(article => {
-    // Normaliza o título para comparação
-    const normalizedTitle = normalizeTitle(article.title)
-
-    // Verifica se já existe um título similar
-    let isDuplicate = false
-    for (const [existingTitle] of seen) {
-      if (isSimilar(normalizedTitle, existingTitle)) {
-        isDuplicate = true
-        break
-      }
+  const seen = new Set<string>()
+  return articles.filter(article => {
+    const key = article.link || article.title
+    if (seen.has(key)) {
+      return false
     }
-
-    if (!isDuplicate) {
-      seen.set(normalizedTitle, article)
-    }
+    seen.add(key)
+    return true
   })
-
-  return Array.from(seen.values())
-}
-
-/**
- * Normaliza título para comparação
- */
-function normalizeTitle(title: string): string {
-  return title
-    .toLowerCase()
-    .replace(/[^a-záàâãéèêíïóôõöúçñ\s]/gi, '') // Remove pontuação
-    .replace(/\s+/g, ' ') // Normaliza espaços
-    .trim()
-    .substring(0, 50) // Pega só início para comparar
-}
-
-/**
- * Verifica se dois títulos são similares (>70% das palavras iguais)
- */
-function isSimilar(title1: string, title2: string): boolean {
-  const words1 = new Set(title1.split(' ').filter(w => w.length > 3))
-  const words2 = new Set(title2.split(' ').filter(w => w.length > 3))
-
-  if (words1.size === 0 || words2.size === 0) return false
-
-  let matches = 0
-  words1.forEach(word => {
-    if (words2.has(word)) matches++
-  })
-
-  const similarity = matches / Math.max(words1.size, words2.size)
-  return similarity > 0.7
 }
 
 /**
