@@ -23,6 +23,7 @@ import { ScoreChart } from '@/components/dashboard/ScoreChart'
 import { NetworkCard, type SocialPost } from '@/components/dashboard/NetworkCard'
 import { MentionList } from '@/components/dashboard/MentionList'
 import { DailyReport } from '@/components/dashboard/DailyReport'
+import { InsightsSection, generateInsights } from '@/components/dashboard/InsightsSection'
 
 // Hooks & Services
 import { usePoliticians } from '@/hooks/usePoliticians'
@@ -449,6 +450,18 @@ export default function Dashboard() {
               <NetworkCard rede="youtube" data={networkData.youtube} icon={networkIcons.youtube} />
             </div>
           )}
+        </div>
+
+        {/* AI Insights */}
+        <div className="mb-6">
+          <InsightsSection
+            sumario={aiAnalysis?.summary || (mentions.length > 0 ? generateInsights(score, stats?.total || 0, stats?.positive || 0, stats?.negative || 0, networkData).sumario : undefined)}
+            recomendacoes={aiAnalysis?.recommendations || (mentions.length > 0 ? generateInsights(score, stats?.total || 0, stats?.positive || 0, stats?.negative || 0, networkData).recomendacoes : undefined)}
+            risks={aiAnalysis?.risks}
+            opportunities={aiAnalysis?.opportunities}
+            isLoading={loadingAI}
+            isAIGenerated={!!aiAnalysis}
+          />
         </div>
 
         {/* Mentions List (compact) */}
