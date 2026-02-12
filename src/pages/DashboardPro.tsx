@@ -725,42 +725,40 @@ export default function Dashboard() {
             </Card>
           ) : insightsData ? (
             <div className="space-y-4">
-              {/* HISTÓRIA DO DIA - Destaque principal */}
-              {insightsData.historiaDoDia && (
-                <Card style={{
-                  backgroundColor: t.cardBg,
-                  borderColor: t.accentText,
-                  borderLeftWidth: '4px'
-                }}>
-                  <CardContent className="p-5">
-                    <div className="flex items-start gap-4">
-                      <div className="w-12 h-12 rounded-full flex items-center justify-center shrink-0"
-                           style={{ backgroundColor: t.accentMuted }}>
-                        <Brain className="h-6 w-6" style={{ color: t.accentText }} />
-                      </div>
-                      <div>
-                        <p className="text-xs uppercase tracking-wider mb-1 font-medium"
-                           style={{ color: t.mutedText }}>
-                          📌 História do Dia
-                        </p>
-                        <p className="text-lg font-semibold leading-snug"
-                           style={{ color: t.brightText }}>
-                          {insightsData.historiaDoDia}
-                        </p>
+              {/* RESUMO EXECUTIVO - Card principal com sumário completo */}
+              <Card style={{
+                backgroundColor: t.cardBg,
+                borderColor: t.accentText,
+                borderLeftWidth: '4px'
+              }}>
+                <CardContent className="p-5">
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 rounded-full flex items-center justify-center shrink-0"
+                         style={{ backgroundColor: t.accentMuted }}>
+                      <Brain className="h-6 w-6" style={{ color: t.accentText }} />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-xs uppercase tracking-wider mb-2 font-medium"
+                         style={{ color: t.mutedText }}>
+                        📋 Resumo Executivo
+                      </p>
+                      <div className="text-sm leading-relaxed whitespace-pre-line"
+                           style={{ color: t.bodyText }}>
+                        {insightsData.sumario || 'Clique em Atualizar para gerar análise.'}
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
-              )}
+                  </div>
+                </CardContent>
+              </Card>
 
-              {/* FATOS RELEVANTES - Citações específicas da mídia */}
+              {/* DESTAQUES - O que está sendo falado */}
               {insightsData.fatosRelevantes && insightsData.fatosRelevantes.length > 0 && (
                 <Card style={{ backgroundColor: t.cardBg, borderColor: t.cardBorder }}>
                   <CardContent className="p-5">
                     <h3 className="font-medium text-sm flex items-center gap-2 mb-4"
                         style={{ color: `${t.brightText}ee` }}>
-                      <AlertTriangle className="h-4 w-4" style={{ color: 'hsl(43,96%,56%)' }} />
-                      Fatos Citados na Mídia
+                      <FileText className="h-4 w-4" style={{ color: t.accentText }} />
+                      Destaques da Cobertura
                     </h3>
                     <ul className="space-y-2">
                       {insightsData.fatosRelevantes.slice(0, 5).map((fato: string, i: number) => (
@@ -773,19 +771,6 @@ export default function Dashboard() {
                   </CardContent>
                 </Card>
               )}
-
-              {/* BRIEFING EXECUTIVO - Full width */}
-              <Card style={{ backgroundColor: t.cardBg, borderColor: t.cardBorder }}>
-                <CardContent className="p-5">
-                  <h3 className="font-medium text-sm flex items-center gap-2 mb-3" style={{ color: `${t.brightText}ee` }}>
-                    <FileText className="h-4 w-4" style={{ color: t.accentText }} />
-                    Briefing Executivo
-                  </h3>
-                  <div className="text-sm leading-relaxed whitespace-pre-line" style={{ color: t.bodyText }}>
-                    {insightsData.sumario}
-                  </div>
-                </CardContent>
-              </Card>
 
               {/* RECOMENDAÇÕES */}
               <Card style={{ backgroundColor: t.cardBg, borderColor: t.cardBorder }}>

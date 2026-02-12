@@ -95,7 +95,7 @@ export function InsightsSection({
         </div>
       )}
 
-      {/* História do Dia - Destaque Principal */}
+      {/* Resumo Executivo - Destaque Principal */}
       {historiaDoDia && (
         <Card className="shadow-lg border-l-4 border-l-primary bg-gradient-to-r from-primary/5 to-transparent">
           <CardContent className="py-4">
@@ -105,7 +105,7 @@ export function InsightsSection({
               </div>
               <div>
                 <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1 font-medium">
-                  História do Dia
+                  📋 Resumo Executivo
                 </p>
                 <p className="text-lg font-semibold leading-snug">
                   {historiaDoDia}

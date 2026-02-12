@@ -389,6 +389,19 @@ function formatDataForAI(data: DailyReportData): string {
 function analyzeLocally(data: DailyReportData): AIAnalysisResult {
   const totalMentions = data.mentions.length
 
+  // Separa menções por tipo
+  const newsMentions = data.mentions.filter(m => m.platform === 'midia' || m.platform === 'news')
+  const youtubeMentions = data.mentions.filter(m => m.platform === 'youtube')
+  const youtubeData = data.networks.find(n => n.network.toLowerCase().includes('youtube'))
+
+  // Vídeos do YouTube (prioritariamente de topPosts, senão de mentions)
+  const youtubeVideos = youtubeData?.topPosts || youtubeMentions.map(m => ({
+    content: m.title,
+    author: m.source,
+    engagement: 0,
+    url: m.url
+  }))
+
   // Palavras-chave expandidas para análise de sentimento
   const positiveIndicators = [
     'aprova', 'conquista', 'sucesso', 'vitória', 'apoio', 'elogia', 'destaca',
@@ -494,11 +507,31 @@ function analyzeLocally(data: DailyReportData): AIAnalysisResult {
   // Summary baseado no CONTEÚDO das notícias, não em estatísticas
   let summary = ''
 
-  if (totalMentions === 0) {
+  // Verifica se há vídeos do YouTube disponíveis
+  const hasYouTubeVideos = youtubeVideos.length > 0
+
+  if (totalMentions === 0 && !hasYouTubeVideos) {
     summary = `⚠️ NÃO FOI POSSÍVEL BUSCAR NOTÍCIAS\n\n`
     summary += `O sistema não conseguiu acessar o Google News no momento. `
     summary += `Isso pode ser um problema temporário de conexão com os servidores de notícias.\n\n`
     summary += `RECOMENDAÇÃO: Clique em "Atualizar" para tentar novamente em alguns minutos.`
+  } else if (newsMentions.length === 0 && hasYouTubeVideos) {
+    // SEM NOTÍCIAS MAS COM YOUTUBE - Usa os vídeos como fonte principal
+    summary = `📺 COBERTURA NO YOUTUBE\n\n`
+    summary += `A busca de notícias não retornou resultados no momento, mas encontramos ${youtubeVideos.length} vídeos no YouTube sobre ${data.politicianName}:\n\n`
+
+    youtubeVideos.slice(0, 5).forEach((video, i) => {
+      const views = video.engagement > 0 ? ` (${video.engagement.toLocaleString()} views)` : ''
+      summary += `${i + 1}. "${video.content}" — ${video.author}${views}\n`
+    })
+
+    summary += `\nO YouTube é um termômetro importante da opinião pública. Monitore os títulos acima para entender a narrativa que está sendo construída sobre ${data.politicianName}.`
+
+    // Atualiza o score baseado nos vídeos (neutro por padrão sem análise profunda)
+    sentimentScore = 50
+    overallSentiment = 'neutro'
+    alertLevel = 'amarelo'
+    alertReason = 'Google News indisponível — análise baseada apenas em YouTube'
   } else if (totalMentions < 3) {
     // Com poucas notícias, citar diretamente
     const topMention = analyzedMentions[0]
@@ -576,9 +609,14 @@ function analyzeLocally(data: DailyReportData): AIAnalysisResult {
     opportunities.push('Volume de cobertura neutra indica espaço para moldar narrativa favoravelmente')
   }
 
-  // Gera história do dia baseada nas notícias mais frequentes
+  // Gera história do dia baseada nas notícias ou vídeos
   let historiaDoDia = 'Monitoramento em andamento — aguardando mais dados'
-  if (totalMentions > 0 && mainTopics.length > 0) {
+
+  if (newsMentions.length === 0 && hasYouTubeVideos) {
+    // Sem notícias, mas com YouTube - usa os vídeos
+    const topVideo = youtubeVideos[0]
+    historiaDoDia = `📺 ${youtubeVideos.length} vídeos no YouTube: "${topVideo?.content?.substring(0, 60) || 'vídeos encontrados'}..."`
+  } else if (totalMentions > 0 && mainTopics.length > 0) {
     if (overallSentiment === 'negativo') {
       historiaDoDia = `${data.politicianName} enfrenta cobertura crítica sobre ${mainTopics[0]}`
     } else if (overallSentiment === 'positivo') {
@@ -588,11 +626,21 @@ function analyzeLocally(data: DailyReportData): AIAnalysisResult {
     }
   }
 
-  // Extrai fatos das notícias
+  // Extrai fatos das notícias OU vídeos
   const fatosRelevantes: string[] = []
-  analyzedMentions.slice(0, 5).forEach(m => {
-    fatosRelevantes.push(`${m.source}: "${m.title.substring(0, 80)}${m.title.length > 80 ? '...' : ''}"`)
-  })
+
+  if (analyzedMentions.length > 0) {
+    // Tem notícias - usa elas
+    analyzedMentions.slice(0, 5).forEach(m => {
+      fatosRelevantes.push(`${m.source}: "${m.title.substring(0, 80)}${m.title.length > 80 ? '...' : ''}"`)
+    })
+  } else if (hasYouTubeVideos) {
+    // Sem notícias - usa vídeos do YouTube
+    youtubeVideos.slice(0, 5).forEach(video => {
+      const views = video.engagement > 0 ? ` (${video.engagement.toLocaleString()} views)` : ''
+      fatosRelevantes.push(`YouTube - ${video.author}: "${video.content.substring(0, 60)}${video.content.length > 60 ? '...' : ''}"${views}`)
+    })
+  }
 
   return {
     summary,
