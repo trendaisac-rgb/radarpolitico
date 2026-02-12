@@ -252,39 +252,6 @@ export default function Dashboard() {
   const [loadingAI, setLoadingAI] = useState(false)
   const [clearingData, setClearingData] = useState(false)
   const [hasFakeData, setHasFakeData] = useState(false)
-
-  // Detecta dados falsos quando mentions mudam
-  useEffect(() => {
-    if (mentions.length > 0) {
-      const isFake = detectFakeData(mentions.map(m => ({ title: m.title, content: m.content })))
-      setHasFakeData(isFake)
-    }
-  }, [mentions])
-
-  // Função para limpar dados
-  const handleClearData = async () => {
-    if (!currentPolitician) return
-    if (!confirm(`Tem certeza que deseja limpar TODOS os dados de ${currentPolitician.name}? Esta ação não pode ser desfeita.`)) {
-      return
-    }
-
-    setClearingData(true)
-    try {
-      const result = await clearMentions(currentPolitician.id)
-      if (result.error) {
-        toast.error(`Erro ao limpar dados: ${result.error}`)
-      } else {
-        toast.success(`${result.deleted} menções removidas! Clique em Atualizar para buscar dados novos.`)
-        setHasFakeData(false)
-        // Força refresh da página para recarregar dados
-        window.location.reload()
-      }
-    } catch (err) {
-      toast.error('Erro ao limpar dados')
-    } finally {
-      setClearingData(false)
-    }
-  }
   const [showReportModal, setShowReportModal] = useState(false)
   const [showPoliticianMenu, setShowPoliticianMenu] = useState(false)
   const [themeKey, setThemeKey] = useState<ThemeKey>(() => {
@@ -331,6 +298,37 @@ export default function Dashboard() {
   }, [politicians, selectedPolitician])
 
   const currentPolitician = politicians?.find(p => p.id === selectedPolitician)
+
+  // Detecta dados falsos quando mentions mudam
+  useEffect(() => {
+    if (mentions.length > 0) {
+      const isFake = detectFakeData(mentions.map(m => ({ title: m.title, content: m.content })))
+      setHasFakeData(isFake)
+    }
+  }, [mentions])
+
+  // Função para limpar dados
+  const handleClearData = async () => {
+    if (!currentPolitician) return
+    if (!confirm(`Tem certeza que deseja limpar TODOS os dados de ${currentPolitician.name}? Esta ação não pode ser desfeita.`)) {
+      return
+    }
+    setClearingData(true)
+    try {
+      const result = await clearMentions(currentPolitician.id)
+      if (result.error) {
+        toast.error(`Erro ao limpar dados: ${result.error}`)
+      } else {
+        toast.success(`${result.deleted} menções removidas! Clique em Atualizar para buscar dados novos.`)
+        setHasFakeData(false)
+        window.location.reload()
+      }
+    } catch (err) {
+      toast.error('Erro ao limpar dados')
+    } finally {
+      setClearingData(false)
+    }
+  }
 
   // Fetch social networks
   useEffect(() => {
@@ -530,7 +528,7 @@ export default function Dashboard() {
         fatosRelevantes: aiAnalysis.fatosRelevantes
       }
     : mentions.length > 0
-      ? generateInsights(score, stats?.total || 0, stats?.positive || 0, stats?.negative || 0, networkData)
+      ? { ...generateInsights(score, stats?.total || 0, stats?.positive || 0, stats?.negative || 0, networkData), historiaDoDia: undefined as string | undefined, fatosRelevantes: undefined as string[] | undefined }
       : null
 
   const todayStr = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })
@@ -1011,7 +1009,7 @@ export default function Dashboard() {
                           <div className="flex items-center gap-2 text-xs" style={{ color: t.mutedText }}>
                             <span className="font-medium" style={{ color: t.accentText }}>{video.author}</span>
                             <span>•</span>
-                            <span>{video.engagement?.toLocaleString() || 0} views</span>
+                            <span>{(video.views || video.likes || 0).toLocaleString()} views</span>
                             {video.sentiment && (
                               <>
                                 <span>•</span>
