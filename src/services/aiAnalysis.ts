@@ -1,15 +1,9 @@
 /**
- * RadarPolítico - Serviço de Análise com IA (OpenAI GPT-4)
- * Gera relatórios diários, análise de sentimento e recomendações
+ * RadarPolítico - Serviço de Análise com IA
+ * Chama edge function segura (chave nunca exposta no frontend)
  */
 
-// ============================================
-// CONFIGURAÇÃO
-// ============================================
-
-const OPENAI_API_KEY = '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'
-
-const OPENAI_MODEL = 'gpt-4o-mini' // Mais barato e rápido, ou use 'gpt-4o' para melhor qualidade
+import { supabase } from '@/integrations/supabase/client'
 
 // ============================================
 // INTERFACES
@@ -39,18 +33,11 @@ export interface NetworkData {
 }
 
 export interface AIAnalysisResult {
-  // Resumo executivo
   summary: string
-
-  // Sentimento geral
   overallSentiment: 'positivo' | 'negativo' | 'neutro' | 'misto'
-  sentimentScore: number // 1-10
-
-  // Alerta de crise
+  sentimentScore: number
   alertLevel: 'verde' | 'amarelo' | 'vermelho'
   alertReason: string
-
-  // Top 3 notícias mais relevantes
   topNews: Array<{
     title: string
     source: string
@@ -58,29 +45,19 @@ export interface AIAnalysisResult {
     relevance: string
     url: string
   }>
-
-  // Temas identificados
   mainTopics: string[]
-
-  // Recomendações
   recommendations: string[]
-
-  // Score por rede
   networkScores: Array<{
     network: string
     score: number
     trend: 'subindo' | 'descendo' | 'estavel'
     insight: string
   }>
-
-  // Análise de risco
   risks: Array<{
     description: string
     severity: 'baixo' | 'medio' | 'alto'
     action: string
   }>
-
-  // Oportunidades
   opportunities: string[]
 }
 
@@ -94,234 +71,127 @@ export interface DailyReportData {
 }
 
 // ============================================
-// PROMPT PRINCIPAL DE ANÁLISE (Estilo Profissional)
+// PROMPT
 // ============================================
 
 const ANALYSIS_PROMPT = `Você é um analista de MONITORAMENTO DE MÍDIA político, NÃO um analista político partidário.
 
-⚠️ REGRAS CRÍTICAS - LEIA COM ATENÇÃO:
-1. Você SOMENTE analisa dados que são FORNECIDOS. NÃO invente dados de redes sociais.
+⚠️ REGRAS CRÍTICAS:
+1. Você SOMENTE analisa dados que são FORNECIDOS. NÃO invente dados.
 2. Este sistema V1 monitora APENAS: Mídia Tradicional (Google News) + YouTube.
-3. NÃO mencione Twitter, Instagram, TikTok, Facebook ou Telegram - não temos acesso a essas redes.
-4. Se não há dados de uma fonte, NÃO inclua ela na análise.
+3. NÃO mencione Twitter, Instagram, TikTok, Facebook ou Telegram.
 
 ⚠️ REGRAS DE IMPARCIALIDADE:
 1. Você NÃO tem opinião política. Analisa FATOS e TOM da cobertura.
 2. Avalie o IMPACTO NA IMAGEM do político, não se a pauta é "boa" ou "ruim" ideologicamente.
-3. Crítica ao político = NEGATIVO, independente de quem critica.
-4. Elogio ao político = POSITIVO, independente de quem elogia.
-5. Notícia factual sem tom = NEUTRO.
-6. Trate políticos de TODOS os partidos com os MESMOS critérios.
+3. Trate políticos de TODOS os partidos com os MESMOS critérios.
 
 CRITÉRIOS DE SCORE (0-10):
-- 10 = Cobertura muito favorável (elogios explícitos, conquista destacada)
-- 7.5 = Cobertura favorável (tom positivo, ação bem-sucedida)
-- 5 = Cobertura neutra (factual, informativo)
-- 2.5 = Cobertura desfavorável (críticas, problemas)
-- 0 = Cobertura muito desfavorável (escândalo, denúncia grave)
-
-FÓRMULA DO SCORE GERAL (V1 - apenas Mídia + YouTube):
-(Mídia × 0.60) + (YouTube × 0.40)
-
-CRITÉRIOS DE ALERTA DE CRISE:
-- VERDE: Nenhum conteúdo com score 0 ou 2.5, score geral >= 5
-- AMARELO: 1-2 conteúdos negativos OU score entre 3.5 e 4.9
-- VERMELHO: Conteúdo viral negativo OU score < 3.5
-
-TASKS:
-1. **SUMÁRIO EXECUTIVO (8-12 frases)** cobrindo:
-   - Visão geral: como foi o dia? (2 frases)
-   - Mídia tradicional: principais notícias e tom (2-3 frases)
-   - YouTube: vídeos relevantes encontrados (2-3 frases)
-   - Pontos de atenção: críticas, polêmicas, riscos (2 frases)
-   - Conclusão: recomendação principal (1-2 frases)
-
-2. **ANÁLISE POR FONTE** - SOMENTE para fontes com dados:
-   - Score de 0 a 10 (média do tom das publicações)
-   - Resumo de 2-3 frases
-   - Top 3 destaques
-
-3. **RECOMENDAÇÕES**: 3 ações práticas para a assessoria de imprensa
+- 10 = Cobertura muito favorável
+- 7.5 = Cobertura favorável
+- 5 = Cobertura neutra
+- 2.5 = Cobertura desfavorável
+- 0 = Cobertura muito desfavorável
 
 FORMATO DE RESPOSTA (JSON estrito):
 {
-  "summary": "string (sumário executivo de 8-12 frases em um único parágrafo)",
+  "summary": "string (sumário executivo de 8-12 frases)",
   "overallSentiment": "positivo|negativo|neutro|misto",
-  "sentimentScore": number (0-10, usando a fórmula ponderada),
+  "sentimentScore": number (0-10),
   "alertLevel": "verde|amarelo|vermelho",
-  "alertReason": "string (motivo do nível de alerta)",
-  "topNews": [
-    {"title": "string", "source": "string", "sentiment": "positivo|negativo|neutro", "relevance": "string", "url": "string"}
-  ],
+  "alertReason": "string",
+  "topNews": [{"title": "string", "source": "string", "sentiment": "positivo|negativo|neutro", "relevance": "string", "url": "string"}],
   "mainTopics": ["string"],
-  "recommendations": ["string (ação específica e acionável)"],
-  "networkScores": [
-    {"network": "string", "score": number (0-10), "trend": "subindo|descendo|estavel", "insight": "string (2-3 frases de análise)"}
-  ],
-  "risks": [
-    {"description": "string", "severity": "baixo|medio|alto", "action": "string (ação recomendada)"}
-  ],
+  "recommendations": ["string"],
+  "networkScores": [{"network": "string", "score": number (0-10), "trend": "subindo|descendo|estavel", "insight": "string"}],
+  "risks": [{"description": "string", "severity": "baixo|medio|alto", "action": "string"}],
   "opportunities": ["string"]
 }`
 
 // ============================================
-// FUNÇÃO PRINCIPAL DE ANÁLISE
+// FUNÇÃO PRINCIPAL
 // ============================================
 
 export async function analyzeWithAI(data: DailyReportData): Promise<AIAnalysisResult> {
-  // Se não tem chave, usa análise local
-  if (!OPENAI_API_KEY) {
-    console.warn('⚠️ OpenAI API key não configurada. Usando análise local.')
-    return analyzeLocally(data)
-  }
-
   try {
     const userMessage = formatDataForAI(data)
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${OPENAI_API_KEY}`
-      },
-      body: JSON.stringify({
-        model: OPENAI_MODEL,
-        messages: [
-          { role: 'system', content: ANALYSIS_PROMPT },
-          { role: 'user', content: userMessage }
-        ],
-        temperature: 0.3, // Mais consistente
-        max_tokens: 2000,
-        response_format: { type: 'json_object' }
-      })
+    const { data: response, error } = await supabase.functions.invoke('ai-analysis', {
+      body: {
+        systemPrompt: ANALYSIS_PROMPT,
+        userMessage,
+        model: 'gpt-4o-mini',
+        temperature: 0.3,
+        maxTokens: 2000
+      }
     })
 
-    if (!response.ok) {
-      const error = await response.json()
-      console.error('OpenAI API error:', error)
-      throw new Error(error.error?.message || 'Erro na API OpenAI')
+    if (error) {
+      console.error('Edge function error:', error)
+      return analyzeLocally(data)
     }
 
-    const result = await response.json()
-    const content = result.choices[0]?.message?.content
-
-    if (!content) {
-      throw new Error('Resposta vazia da OpenAI')
+    if (response?.fallback || !response?.content) {
+      console.warn('AI não configurada, usando análise local')
+      return analyzeLocally(data)
     }
 
-    const analysis = JSON.parse(content) as AIAnalysisResult
-    return analysis
-
+    return JSON.parse(response.content) as AIAnalysisResult
   } catch (error) {
     console.error('Erro na análise com IA:', error)
-    // Fallback para análise local
     return analyzeLocally(data)
   }
 }
 
 // ============================================
-// FORMATA DADOS PARA ENVIAR À IA (Formato Profissional)
+// FORMATA DADOS PARA A IA
 // ============================================
 
 function formatDataForAI(data: DailyReportData): string {
-  // V1: Apenas Mídia Tradicional (Google News) + YouTube
-  // NÃO incluir Twitter, Instagram, TikTok - não temos acesso a essas redes
-
-  // Agrupa menções por fonte
   const midiaMencoes = data.mentions.filter(m => m.platform === 'midia' || m.platform === 'news')
   const youtubeMencoes = data.mentions.filter(m => m.platform === 'youtube')
-
-  // Calcula estatísticas apenas para YouTube (única rede disponível)
-  const calcStats = (network: NetworkData | undefined) => ({
-    quantidade: network?.mentions || 0,
-    engajamento_total: network?.topPosts?.reduce((sum, p) => sum + (p.engagement || 0), 0) || 0,
-    positivas: network?.positive || 0,
-    negativas: network?.negative || 0,
-    neutras: network?.neutral || 0
-  })
-
   const youtubeData = data.networks.find(n => n.network.toLowerCase().includes('youtube'))
-
-  const stats = {
-    midia: { quantidade: midiaMencoes.length, engajamento_total: 0 },
-    youtube: calcStats(youtubeData)
-  }
 
   let message = `Analise a cobertura do político ${data.politicianName}`
   if (data.party) message += ` (${data.party})`
   if (data.position) message += ` - ${data.position}`
   message += ` nas últimas 24 horas.\n\n`
-
   message += `📅 Data: ${data.date}\n\n`
 
-  message += `⚠️ IMPORTANTE: Este sistema V1 monitora APENAS Mídia Tradicional + YouTube.\n`
-  message += `NÃO mencione Twitter, Instagram, TikTok ou outras redes - não temos dados dessas fontes.\n\n`
-
-  message += `═══════════════════════════════════════\n`
-  message += `DADOS DISPONÍVEIS (V1):\n`
-  message += `═══════════════════════════════════════\n\n`
-
-  // Mídia Tradicional (Google News)
-  message += `📰 MÍDIA TRADICIONAL - Google News (${stats.midia.quantidade} itens):\n`
+  message += `📰 MÍDIA TRADICIONAL (${midiaMencoes.length} itens):\n`
   if (midiaMencoes.length > 0) {
     message += JSON.stringify(midiaMencoes.slice(0, 15).map(m => ({
-      titulo: m.title,
-      fonte: m.source,
-      url: m.url,
-      data: m.publishedAt
+      titulo: m.title, fonte: m.source, url: m.url
     })), null, 2) + '\n\n'
   } else {
-    message += 'Nenhuma menção encontrada na mídia tradicional\n\n'
+    message += 'Nenhuma menção encontrada\n\n'
   }
 
-  // YouTube
-  message += `🎬 YOUTUBE (${stats.youtube.quantidade} itens, ${stats.youtube.engajamento_total} engajamento):\n`
+  message += `🎬 YOUTUBE:\n`
   if (youtubeData?.topPosts?.length) {
     message += JSON.stringify(youtubeData.topPosts.slice(0, 10).map(p => ({
-      titulo: p.content,
-      canal: p.author,
-      engajamento: p.engagement,
-      url: p.url
+      titulo: p.content, canal: p.author, engajamento: p.engagement, url: p.url
     })), null, 2) + '\n\n'
   } else if (youtubeMencoes.length > 0) {
     message += JSON.stringify(youtubeMencoes.slice(0, 10).map(m => ({
-      titulo: m.title,
-      canal: m.source,
-      url: m.url
+      titulo: m.title, canal: m.source, url: m.url
     })), null, 2) + '\n\n'
   } else {
-    message += 'Nenhum vídeo encontrado no YouTube\n\n'
+    message += 'Nenhum vídeo encontrado\n\n'
   }
 
-  message += `═══════════════════════════════════════\n`
-  message += `RESUMO DOS DADOS DISPONÍVEIS:\n`
-  message += `═══════════════════════════════════════\n`
-  message += `- Mídia Tradicional: ${stats.midia.quantidade} notícias\n`
-  message += `- YouTube: ${stats.youtube.quantidade} vídeos (${stats.youtube.engajamento_total} engajamento total)\n\n`
-
-  message += `Gere o relatório completo no formato JSON especificado.\n`
-  message += `LEMBRE-SE: Analise APENAS os dados fornecidos acima. NÃO invente dados de outras redes sociais.`
-
+  message += `Gere o relatório completo no formato JSON especificado.`
   return message
 }
 
 // ============================================
-// ANÁLISE LOCAL (FALLBACK SEM API)
+// ANÁLISE LOCAL (FALLBACK)
 // ============================================
 
 function analyzeLocally(data: DailyReportData): AIAnalysisResult {
   const totalMentions = data.mentions.length
-
-  // Análise de sentimento por palavras-chave
-  const positiveWords = [
-    'aprova', 'conquista', 'sucesso', 'vitória', 'apoio', 'elogia', 'destaca',
-    'cresce', 'avança', 'lidera', 'popular', 'favorito', 'melhora', 'benefício'
-  ]
-
-  const negativeWords = [
-    'critica', 'acusa', 'investiga', 'denuncia', 'rejeita', 'crise', 'escândalo',
-    'corrupção', 'fraude', 'prisão', 'derrota', 'perde', 'queda', 'protesto', 'polêmica'
-  ]
+  const positiveWords = ['aprova', 'conquista', 'sucesso', 'vitória', 'apoio', 'elogia', 'destaca', 'cresce', 'avança', 'lidera', 'popular', 'favorito', 'melhora', 'benefício']
+  const negativeWords = ['critica', 'acusa', 'investiga', 'denuncia', 'rejeita', 'crise', 'escândalo', 'corrupção', 'fraude', 'prisão', 'derrota', 'perde', 'queda', 'protesto', 'polêmica']
 
   let positiveCount = 0
   let negativeCount = 0
@@ -329,22 +199,13 @@ function analyzeLocally(data: DailyReportData): AIAnalysisResult {
   const analyzedMentions = data.mentions.map(mention => {
     const text = `${mention.title} ${mention.content || ''}`.toLowerCase()
     let sentiment: 'positivo' | 'negativo' | 'neutro' = 'neutro'
-
     const posMatches = positiveWords.filter(w => text.includes(w)).length
     const negMatches = negativeWords.filter(w => text.includes(w)).length
-
-    if (posMatches > negMatches) {
-      sentiment = 'positivo'
-      positiveCount++
-    } else if (negMatches > posMatches) {
-      sentiment = 'negativo'
-      negativeCount++
-    }
-
+    if (posMatches > negMatches) { sentiment = 'positivo'; positiveCount++ }
+    else if (negMatches > posMatches) { sentiment = 'negativo'; negativeCount++ }
     return { ...mention, sentiment }
   })
 
-  // Calcula score (1-10)
   let sentimentScore = 5
   if (totalMentions > 0) {
     const ratio = (positiveCount - negativeCount) / totalMentions
@@ -352,110 +213,44 @@ function analyzeLocally(data: DailyReportData): AIAnalysisResult {
     sentimentScore = Math.max(1, Math.min(10, sentimentScore))
   }
 
-  // Determina sentimento geral
   let overallSentiment: 'positivo' | 'negativo' | 'neutro' | 'misto' = 'neutro'
   if (positiveCount > negativeCount * 1.5) overallSentiment = 'positivo'
   else if (negativeCount > positiveCount * 1.5) overallSentiment = 'negativo'
   else if (positiveCount > 0 && negativeCount > 0) overallSentiment = 'misto'
 
-  // Determina alerta
   let alertLevel: 'verde' | 'amarelo' | 'vermelho' = 'verde'
   let alertReason = 'Dia tranquilo, sem situações críticas detectadas'
-
   if (negativeCount > totalMentions * 0.5 && negativeCount > 3) {
     alertLevel = 'vermelho'
     alertReason = `Alta concentração de menções negativas (${negativeCount} de ${totalMentions})`
   } else if (negativeCount > totalMentions * 0.3 && negativeCount > 2) {
     alertLevel = 'amarelo'
-    alertReason = `Aumento de menções negativas detectado - monitorar de perto`
+    alertReason = `Aumento de menções negativas detectado`
   }
 
-  // Top 3 notícias
-  const topNews = analyzedMentions
-    .slice(0, 3)
-    .map(m => ({
-      title: m.title,
-      source: m.source,
-      sentiment: m.sentiment,
-      relevance: m.sentiment === 'negativo'
-        ? 'Requer atenção - conteúdo crítico'
-        : m.sentiment === 'positivo'
-          ? 'Oportunidade de amplificação'
-          : 'Menção neutra',
-      url: m.url
-    }))
+  const topNews = analyzedMentions.slice(0, 3).map(m => ({
+    title: m.title,
+    source: m.source,
+    sentiment: m.sentiment,
+    relevance: m.sentiment === 'negativo' ? 'Requer atenção' : m.sentiment === 'positivo' ? 'Oportunidade de amplificação' : 'Menção neutra',
+    url: m.url
+  }))
 
-  // Extrai tópicos
-  const topicKeywords: Record<string, string[]> = {
-    'economia': ['economia', 'econômico', 'inflação', 'pib', 'emprego'],
-    'saúde': ['saúde', 'hospital', 'vacina', 'sus'],
-    'educação': ['educação', 'escola', 'universidade'],
-    'segurança': ['segurança', 'polícia', 'crime', 'violência'],
-    'eleições': ['eleição', 'votação', 'campanha', 'candidato']
-  }
-
-  const allText = data.mentions.map(m => m.title.toLowerCase()).join(' ')
-  const mainTopics = Object.entries(topicKeywords)
-    .filter(([_, keywords]) => keywords.some(k => allText.includes(k)))
-    .map(([topic]) => topic)
-    .slice(0, 3)
-
-  // Gera recomendações
   const recommendations: string[] = []
-
   if (alertLevel === 'vermelho') {
-    recommendations.push('Prioridade: Avaliar necessidade de nota oficial ou pronunciamento')
-    recommendations.push('Monitorar evolução das menções negativas nas próximas horas')
+    recommendations.push('Avaliar necessidade de nota oficial')
+    recommendations.push('Monitorar evolução das menções negativas')
   } else if (alertLevel === 'amarelo') {
-    recommendations.push('Acompanhar de perto os temas que geraram menções negativas')
+    recommendations.push('Acompanhar temas que geraram menções negativas')
     recommendations.push('Preparar respostas caso a situação escale')
   } else {
     recommendations.push('Aproveitar momento favorável para comunicações positivas')
-    recommendations.push('Considerar amplificar notícias positivas nas redes sociais')
+    recommendations.push('Amplificar notícias positivas')
   }
 
-  if (positiveCount > 0) {
-    recommendations.push(`Oportunidade: ${positiveCount} menções positivas podem ser amplificadas`)
-  }
-
-  // Scores por rede
-  const networkScores = data.networks.map(network => {
-    const total = network.positive + network.negative + network.neutral
-    let score = 50
-    if (total > 0) {
-      score = Math.round(50 + ((network.positive - network.negative) / total) * 50)
-    }
-
-    return {
-      network: network.network,
-      score: Math.max(0, Math.min(100, score)),
-      trend: 'estavel' as const,
-      insight: total > 0
-        ? `${network.mentions} menções, ${network.positive} positivas`
-        : 'Sem dados suficientes'
-    }
-  })
-
-  // Riscos
-  const risks = negativeCount > 0 ? [{
-    description: `${negativeCount} menções negativas detectadas`,
-    severity: negativeCount > 5 ? 'alto' as const : negativeCount > 2 ? 'medio' as const : 'baixo' as const,
-    action: 'Monitorar evolução e preparar posicionamento se necessário'
-  }] : []
-
-  // Oportunidades
-  const opportunities = positiveCount > 0
-    ? [`${positiveCount} menções positivas podem ser aproveitadas para reforçar imagem`]
-    : []
-
-  // Resumo
   const summary = `Hoje foram registradas ${totalMentions} menções sobre ${data.politicianName}. ` +
     `${positiveCount} positivas, ${negativeCount} negativas e ${totalMentions - positiveCount - negativeCount} neutras. ` +
-    (alertLevel === 'verde'
-      ? 'Dia sem grandes ocorrências.'
-      : alertLevel === 'amarelo'
-        ? 'Atenção recomendada para algumas menções críticas.'
-        : 'Situação requer ação imediata.')
+    (alertLevel === 'verde' ? 'Dia sem grandes ocorrências.' : alertLevel === 'amarelo' ? 'Atenção recomendada.' : 'Situação requer ação imediata.')
 
   return {
     summary,
@@ -464,16 +259,25 @@ function analyzeLocally(data: DailyReportData): AIAnalysisResult {
     alertLevel,
     alertReason,
     topNews,
-    mainTopics: mainTopics.length > 0 ? mainTopics : ['política'],
+    mainTopics: ['política'],
     recommendations,
-    networkScores,
-    risks,
-    opportunities
+    networkScores: data.networks.map(n => ({
+      network: n.network,
+      score: n.mentions > 0 ? Math.round(50 + ((n.positive - n.negative) / n.mentions) * 50) : 50,
+      trend: 'estavel' as const,
+      insight: n.mentions > 0 ? `${n.mentions} menções, ${n.positive} positivas` : 'Sem dados'
+    })),
+    risks: negativeCount > 0 ? [{
+      description: `${negativeCount} menções negativas detectadas`,
+      severity: negativeCount > 5 ? 'alto' as const : negativeCount > 2 ? 'medio' as const : 'baixo' as const,
+      action: 'Monitorar evolução'
+    }] : [],
+    opportunities: positiveCount > 0 ? [`${positiveCount} menções positivas podem ser aproveitadas`] : []
   }
 }
 
 // ============================================
-// ANÁLISE RÁPIDA DE TEXTO (para sentimento individual)
+// ANÁLISE DE SENTIMENTO INDIVIDUAL
 // ============================================
 
 export async function analyzeSentimentAI(text: string): Promise<{
@@ -481,37 +285,22 @@ export async function analyzeSentimentAI(text: string): Promise<{
   confidence: number
   explanation: string
 }> {
-  if (!OPENAI_API_KEY) {
-    // Fallback local
-    return analyzeSentimentLocal(text)
-  }
-
   try {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${OPENAI_API_KEY}`
-      },
-      body: JSON.stringify({
+    const { data: response } = await supabase.functions.invoke('ai-analysis', {
+      body: {
+        systemPrompt: 'Analise o sentimento do texto em relação a um político. Responda em JSON: {"sentiment": "positivo|negativo|neutro", "confidence": 0-1, "explanation": "breve explicação"}',
+        userMessage: text,
         model: 'gpt-4o-mini',
-        messages: [
-          {
-            role: 'system',
-            content: 'Analise o sentimento do texto em relação a um político. Responda em JSON: {"sentiment": "positivo|negativo|neutro", "confidence": 0-1, "explanation": "breve explicação"}'
-          },
-          { role: 'user', content: text }
-        ],
         temperature: 0.1,
-        max_tokens: 150,
-        response_format: { type: 'json_object' }
-      })
+        maxTokens: 150
+      }
     })
 
-    if (!response.ok) throw new Error('API error')
+    if (response?.fallback || !response?.content) {
+      return analyzeSentimentLocal(text)
+    }
 
-    const result = await response.json()
-    return JSON.parse(result.choices[0]?.message?.content || '{}')
+    return JSON.parse(response.content)
   } catch {
     return analyzeSentimentLocal(text)
   }
@@ -523,33 +312,24 @@ function analyzeSentimentLocal(text: string): {
   explanation: string
 } {
   const lower = text.toLowerCase()
-
   const positiveWords = ['aprova', 'conquista', 'sucesso', 'vitória', 'apoio', 'elogia']
   const negativeWords = ['critica', 'acusa', 'escândalo', 'crise', 'corrupção', 'fraude']
-
   const posMatches = positiveWords.filter(w => lower.includes(w)).length
   const negMatches = negativeWords.filter(w => lower.includes(w)).length
-
-  if (posMatches > negMatches) {
-    return { sentiment: 'positivo', confidence: 0.7, explanation: 'Palavras positivas detectadas' }
-  } else if (negMatches > posMatches) {
-    return { sentiment: 'negativo', confidence: 0.7, explanation: 'Palavras negativas detectadas' }
-  }
-
+  if (posMatches > negMatches) return { sentiment: 'positivo', confidence: 0.7, explanation: 'Palavras positivas detectadas' }
+  if (negMatches > posMatches) return { sentiment: 'negativo', confidence: 0.7, explanation: 'Palavras negativas detectadas' }
   return { sentiment: 'neutro', confidence: 0.5, explanation: 'Conteúdo aparentemente neutro' }
 }
 
 // ============================================
-// VERIFICAR SE API ESTÁ CONFIGURADA
+// STATUS
 // ============================================
 
 export function isAIConfigured(): boolean {
-  return !!OPENAI_API_KEY
+  // Always true now - edge function handles fallback
+  return true
 }
 
 export function getAIStatus(): { configured: boolean; model: string } {
-  return {
-    configured: !!OPENAI_API_KEY,
-    model: OPENAI_MODEL
-  }
+  return { configured: true, model: 'gpt-4o-mini (via edge function)' }
 }
