@@ -32,7 +32,7 @@ import { searchAllNetworks, type SocialSearchResult } from '@/services/socialMed
 import { analyzeWithAI, type AIAnalysisResult } from '@/services/aiAnalysis'
 import { printReport, shareViaWhatsApp, type ReportData } from '@/services/reportExport'
 import { calculateScore, getAlertLevel, type ScoreResult } from '@/services/scoreCalculator'
-import { clearMentions, detectFakeData } from '@/services/monitor'
+// Removido: import { clearMentions, detectFakeData } from '@/services/monitor'
 
 // Dialog
 import {
@@ -250,8 +250,6 @@ export default function Dashboard() {
   const [chartPeriod, setChartPeriod] = useState<number>(30)
   const [aiAnalysis, setAIAnalysis] = useState<AIAnalysisResult | null>(null)
   const [loadingAI, setLoadingAI] = useState(false)
-  const [clearingData, setClearingData] = useState(false)
-  const [hasFakeData, setHasFakeData] = useState(false)
   const [showReportModal, setShowReportModal] = useState(false)
   const [showPoliticianMenu, setShowPoliticianMenu] = useState(false)
   const [themeKey, setThemeKey] = useState<ThemeKey>(() => {
@@ -298,37 +296,6 @@ export default function Dashboard() {
   }, [politicians, selectedPolitician])
 
   const currentPolitician = politicians?.find(p => p.id === selectedPolitician)
-
-  // Detecta dados falsos quando mentions mudam
-  useEffect(() => {
-    if (mentions.length > 0) {
-      const isFake = detectFakeData(mentions.map(m => ({ title: m.title, content: m.content })))
-      setHasFakeData(isFake)
-    }
-  }, [mentions])
-
-  // Função para limpar dados
-  const handleClearData = async () => {
-    if (!currentPolitician) return
-    if (!confirm(`Tem certeza que deseja limpar TODOS os dados de ${currentPolitician.name}? Esta ação não pode ser desfeita.`)) {
-      return
-    }
-    setClearingData(true)
-    try {
-      const result = await clearMentions(currentPolitician.id)
-      if (result.error) {
-        toast.error(`Erro ao limpar dados: ${result.error}`)
-      } else {
-        toast.success(`${result.deleted} menções removidas! Clique em Atualizar para buscar dados novos.`)
-        setHasFakeData(false)
-        window.location.reload()
-      }
-    } catch (err) {
-      toast.error('Erro ao limpar dados')
-    } finally {
-      setClearingData(false)
-    }
-  }
 
   // Fetch social networks
   useEffect(() => {
@@ -697,40 +664,6 @@ export default function Dashboard() {
             </div>
           </CardContent>
         </Card>
-
-        {/* AVISO DE DADOS FALSOS */}
-        {hasFakeData && (
-          <Card className="border-2" style={{ backgroundColor: 'hsl(43,30%,15%)', borderColor: 'hsl(43,80%,50%)' }}>
-            <CardContent className="p-4">
-              <div className="flex items-start gap-3">
-                <AlertTriangle className="h-6 w-6 shrink-0 text-yellow-500" />
-                <div className="flex-1">
-                  <h3 className="font-semibold text-yellow-400 mb-1">⚠️ Dados possivelmente desatualizados</h3>
-                  <p className="text-sm text-yellow-200/80 mb-3">
-                    Detectamos que os dados podem estar desatualizados ou inconsistentes.
-                    Recomendamos limpar os dados antigos e buscar novamente.
-                  </p>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleClearData}
-                    disabled={clearingData}
-                    className="bg-yellow-900/50 border-yellow-600 text-yellow-200 hover:bg-yellow-900"
-                  >
-                    {clearingData ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Limpando...
-                      </>
-                    ) : (
-                      <>🗑️ Limpar dados e buscar novamente</>
-                    )}
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
 
         {/* PERFORMANCE POR REDE */}
         <div>
