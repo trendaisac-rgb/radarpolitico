@@ -1,40 +1,37 @@
 /**
- * RadarPolítico - Dashboard Profissional
- * Painel de monitoramento 360° com todas as redes sociais
+ * RadarPolítico - Dashboard Redesenhado
+ * Layout limpo com hierarquia visual clara
  */
 
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
-  BarChart3, RefreshCw, Plus, Home, LogOut, Bell,
-  Newspaper, TrendingUp, TrendingDown, Minus, Loader2,
-  AlertTriangle, CheckCircle2, Info, ExternalLink,
-  Clock, Zap, Play, Sparkles, FileDown
+  BarChart3, Home, LogOut, Bell, Newspaper, Loader2,
+  Zap, Plus
 } from 'lucide-react'
 import { supabase, type Politician, type Mention } from '@/integrations/supabase/client'
 import { toast } from 'sonner'
 
-// Componentes do Dashboard
-import { ScoreGauge } from '@/components/dashboard/ScoreGauge'
+// Dashboard Components
+import { DashboardToolbar } from '@/components/dashboard/DashboardToolbar'
+import { StatsRow } from '@/components/dashboard/StatsRow'
 import { AlertBanner } from '@/components/dashboard/AlertBanner'
-import { NetworkCard, type SocialPost } from '@/components/dashboard/NetworkCard'
 import { ScoreChart } from '@/components/dashboard/ScoreChart'
-import { InsightsSection } from '@/components/dashboard/InsightsSection'
+import { NetworkCard, type SocialPost } from '@/components/dashboard/NetworkCard'
+import { MentionList } from '@/components/dashboard/MentionList'
+import { DailyReport } from '@/components/dashboard/DailyReport'
 
-// Hooks e Services
+// Hooks & Services
 import { usePoliticians } from '@/hooks/usePoliticians'
 import { useMentions, useMentionStats } from '@/hooks/useMentions'
 import { useMonitoring } from '@/hooks/useMonitoring'
 import { searchAllNetworks, type SocialSearchResult } from '@/services/socialMedia'
-import { analyzeWithAI, type AIAnalysisResult, isAIConfigured } from '@/services/aiAnalysis'
+import { analyzeWithAI, type AIAnalysisResult } from '@/services/aiAnalysis'
 import { printReport, shareViaWhatsApp, type ReportData } from '@/services/reportExport'
 import { calculateScore, getAlertLevel, type ScoreResult } from '@/services/scoreCalculator'
-import { DailyReport } from '@/components/dashboard/DailyReport'
 
 // Dialog
 import {
@@ -42,16 +39,15 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger
 } from '@/components/ui/dialog'
 
-// Ícones das redes (V1: apenas Mídia + YouTube)
+// Network icons (V1: Mídia + YouTube only)
 const networkIcons: Record<string, string> = {
   midia: '📰',
   youtube: '▶️'
 }
 
-// Converte menções do banco em formato de posts
+// Convert DB mentions to SocialPost format
 function mentionsToSocialPosts(mentions: Mention[], source: string): SocialPost[] {
   return mentions
     .filter(m => {
@@ -72,7 +68,6 @@ function mentionsToSocialPosts(mentions: Mention[], source: string): SocialPost[
     }))
 }
 
-// Converte resultados de redes sociais em formato de posts
 function socialResultToPosts(result: SocialSearchResult | undefined): SocialPost[] {
   if (!result || !result.posts) return []
   return result.posts.slice(0, 5).map(p => ({
@@ -92,7 +87,7 @@ function socialResultToPosts(result: SocialSearchResult | undefined): SocialPost
   }))
 }
 
-// Gera histórico de scores para o gráfico
+// Generate score history for chart
 function generateScoreHistory(mentions: Mention[], days: number = 7) {
   const history: { data: string; score: number; mencoes?: number }[] = []
   const now = new Date()
@@ -103,7 +98,6 @@ function generateScoreHistory(mentions: Mention[], days: number = 7) {
     const dateStr = date.toISOString().split('T')[0]
     const dayStr = date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })
 
-    // Filtra menções do dia
     const dayMentions = mentions.filter(m => {
       const mDate = new Date(m.published_at || m.created_at).toISOString().split('T')[0]
       return mDate === dateStr
@@ -119,63 +113,13 @@ function generateScoreHistory(mentions: Mention[], days: number = 7) {
       score = Math.max(0, Math.min(100, score))
     }
 
-    history.push({
-      data: dayStr,
-      score,
-      mencoes: total
-    })
+    history.push({ data: dayStr, score, mencoes: total })
   }
 
   return history
 }
 
-// Gera insights baseado nos dados (V1: apenas Mídia + YouTube)
-function generateAIInsights(
-  mentions: Mention[],
-  socialResults: Record<string, SocialSearchResult>,
-  score: number
-): { summary: string; recommendations: string[] } {
-  const total = mentions.length
-  const positive = mentions.filter(m => m.sentiment === 'positivo').length
-  const negative = mentions.filter(m => m.sentiment === 'negativo').length
-
-  // V1: Conta apenas menções de mídia e YouTube
-  const ytCount = socialResults.youtube?.totalResults || 0
-  const newsCount = mentions.filter(m => !m.source_name?.toLowerCase().includes('youtube')).length
-
-  let summary = ''
-  const recommendations: string[] = []
-
-  if (score >= 70) {
-    summary = `Excelente! Sua imagem está muito positiva com score ${score}. ${total} menções foram analisadas na mídia e YouTube, sendo ${positive} positivas.`
-    recommendations.push('Continue monitorando para manter esse padrão positivo')
-    recommendations.push('Aproveite o momento favorável para amplificar conquistas')
-  } else if (score >= 50) {
-    summary = `Situação estável com score ${score}. Das ${total} menções na mídia, ${positive} foram positivas e ${negative} negativas.`
-    recommendations.push('Foque em aumentar menções positivas com ações proativas')
-    recommendations.push('Monitore de perto os temas que geram sentimento negativo')
-  } else if (score >= 30) {
-    summary = `Atenção: score ${score} indica predominância de menções negativas. ${negative} de ${total} menções são negativas.`
-    recommendations.push('Identifique os principais temas negativos e elabore respostas')
-    recommendations.push('Considere ações de comunicação para reverter o cenário')
-  } else {
-    summary = `Alerta crítico! Score ${score} indica crise de imagem. ${negative} menções negativas detectadas na mídia.`
-    recommendations.push('Ação imediata necessária: avalie os principais focos de crise')
-    recommendations.push('Considere pronunciamento oficial sobre os temas mais sensíveis')
-  }
-
-  // Adiciona insights sobre fontes disponíveis (V1)
-  if (ytCount > 0) {
-    recommendations.push(`YouTube: ${ytCount} vídeos encontrados - analise os mais relevantes`)
-  }
-  if (newsCount > 0) {
-    recommendations.push(`Mídia: ${newsCount} notícias monitoradas hoje`)
-  }
-
-  return { summary, recommendations }
-}
-
-export default function DashboardPro() {
+export default function Dashboard() {
   const navigate = useNavigate()
   const [selectedPolitician, setSelectedPolitician] = useState<number | null>(null)
   const [user, setUser] = useState<any>(null)
@@ -183,8 +127,6 @@ export default function DashboardPro() {
   const [socialResults, setSocialResults] = useState<Record<string, SocialSearchResult>>({})
   const [loadingSocial, setLoadingSocial] = useState(false)
   const [chartPeriod, setChartPeriod] = useState<number>(7)
-
-  // IA Analysis
   const [aiAnalysis, setAIAnalysis] = useState<AIAnalysisResult | null>(null)
   const [loadingAI, setLoadingAI] = useState(false)
   const [showReportModal, setShowReportModal] = useState(false)
@@ -193,24 +135,18 @@ export default function DashboardPro() {
   useEffect(() => {
     const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession()
-      if (!session) {
-        navigate('/login')
-        return
-      }
+      if (!session) { navigate('/login'); return }
       setUser(session.user)
       setCheckingAuth(false)
     }
     checkAuth()
-
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!session) navigate('/login')
       else setUser(session.user)
     })
-
     return () => subscription.unsubscribe()
   }, [navigate])
 
-  // Logout
   const handleLogout = async () => {
     await supabase.auth.signOut()
     toast.success('Logout realizado')
@@ -224,9 +160,9 @@ export default function DashboardPro() {
     limit: 100
   })
   const { data: stats, refetch: refetchStats } = useMentionStats(selectedPolitician || 0)
-  const { isMonitoring, runMonitoring, lastResult } = useMonitoring()
+  const { isMonitoring, runMonitoring } = useMonitoring()
 
-  // Seleciona primeiro político
+  // Auto-select first politician
   useEffect(() => {
     if (!selectedPolitician && politicians && politicians.length > 0) {
       setSelectedPolitician(politicians[0].id)
@@ -235,11 +171,10 @@ export default function DashboardPro() {
 
   const currentPolitician = politicians?.find(p => p.id === selectedPolitician)
 
-  // Busca redes sociais quando político muda
+  // Fetch social networks when politician changes
   useEffect(() => {
     if (currentPolitician) {
       fetchSocialNetworks(currentPolitician)
-      // Reseta análise de IA quando muda de político
       setAIAnalysis(null)
     }
   }, [currentPolitician?.id])
@@ -247,45 +182,21 @@ export default function DashboardPro() {
   const fetchSocialNetworks = async (politician: Politician) => {
     setLoadingSocial(true)
     try {
-      // Monta a query principal: nome ou apelido
       let query = politician.nickname || politician.name
-
-      // Adiciona termos de busca personalizados (keywords sem prefixo "-")
       const includeTerms = (politician.keywords || []).filter(k => !k.startsWith('-'))
-      if (includeTerms.length > 0) {
-        // Adiciona o primeiro termo de inclusão à query
-        query = `${query} OR ${includeTerms[0]}`
-      }
-
-      // Extrai termos de exclusão (keywords com prefixo "-")
-      const excludeTerms = (politician.keywords || [])
-        .filter(k => k.startsWith('-'))
-        .map(k => k.substring(1).toLowerCase())
-
-      console.log(`🔍 Buscando: "${query}"`)
-      if (excludeTerms.length > 0) {
-        console.log(`❌ Excluindo termos: ${excludeTerms.join(', ')}`)
-      }
+      if (includeTerms.length > 0) query = `${query} OR ${includeTerms[0]}`
+      const excludeTerms = (politician.keywords || []).filter(k => k.startsWith('-')).map(k => k.substring(1).toLowerCase())
 
       const results = await searchAllNetworks(query)
 
-      // Aplica filtros de exclusão nos resultados
       if (excludeTerms.length > 0) {
         Object.keys(results).forEach(key => {
           if (results[key]?.posts) {
-            const originalCount = results[key].posts.length
             results[key].posts = results[key].posts.filter(post => {
               const content = (post.content || '').toLowerCase()
               const author = (post.author || '').toLowerCase()
-              // Exclui posts que contenham termos de exclusão
-              return !excludeTerms.some(term =>
-                content.includes(term) || author.includes(term)
-              )
+              return !excludeTerms.some(term => content.includes(term) || author.includes(term))
             })
-            const filteredCount = originalCount - results[key].posts.length
-            if (filteredCount > 0) {
-              console.log(`✂️ ${key}: ${filteredCount} posts filtrados por termos de exclusão`)
-            }
           }
         })
       }
@@ -298,17 +209,11 @@ export default function DashboardPro() {
     }
   }
 
-  // Executa análise de IA quando tiver dados
+  // AI Analysis
   const runAIAnalysis = async () => {
     if (!currentPolitician || mentions.length === 0) return
-    if (!isAIConfigured()) {
-      console.log('OpenAI não configurada, usando análise local')
-      return
-    }
-
     setLoadingAI(true)
     try {
-      // Função helper para criar dados de rede
       const createNetworkData = (name: string, results: typeof socialResults.youtube) => ({
         network: name,
         mentions: results?.totalResults || 0,
@@ -316,34 +221,24 @@ export default function DashboardPro() {
         negative: results?.posts?.filter(p => p.sentiment === 'negativo').length || 0,
         neutral: results?.posts?.filter(p => p.sentiment === 'neutro').length || 0,
         topPosts: results?.posts?.slice(0, 5).map(p => ({
-          content: p.content || '',
-          author: p.author || 'Desconhecido',
-          engagement: (p.likes || 0) + (p.comments || 0) + (p.views || 0),
-          url: p.url || ''
+          content: p.content || '', author: p.author || 'Desconhecido',
+          engagement: (p.likes || 0) + (p.comments || 0) + (p.views || 0), url: p.url || ''
         })) || []
       })
 
-      // Prepara dados para a IA no formato correto
-      // V1: Apenas Mídia (Google News) + YouTube - NÃO incluir Twitter/Instagram/TikTok
-      const reportData = {
+      const result = await analyzeWithAI({
         politicianName: currentPolitician.name,
         party: currentPolitician.party,
         position: currentPolitician.position,
         date: new Date().toLocaleDateString('pt-BR'),
         mentions: mentions.map(m => ({
-          title: m.title || '',
-          content: m.content || m.summary || '',
-          source: m.source_name || 'Desconhecido',
-          url: m.url || '',
+          title: m.title || '', content: m.content || m.summary || '',
+          source: m.source_name || 'Desconhecido', url: m.url || '',
           platform: m.source_name?.toLowerCase().includes('youtube') ? 'youtube' : 'midia',
           publishedAt: m.published_at || m.created_at
         })),
-        networks: [
-          createNetworkData('YouTube', socialResults.youtube)
-        ].filter(n => n.mentions > 0 || n.topPosts.length > 0)
-      }
-
-      const result = await analyzeWithAI(reportData)
+        networks: [createNetworkData('YouTube', socialResults.youtube)].filter(n => n.mentions > 0 || n.topPosts.length > 0)
+      })
       setAIAnalysis(result)
       toast.success('Análise de IA concluída!')
     } catch (error) {
@@ -354,48 +249,31 @@ export default function DashboardPro() {
     }
   }
 
-  // Executa análise quando dados carregarem
+  // Auto-run AI when data loads
   useEffect(() => {
-    if (mentions.length > 0 && !loadingMentions && !loadingSocial && isAIConfigured()) {
-      // Delay para não executar muitas vezes
+    if (mentions.length > 0 && !loadingMentions && !loadingSocial) {
       const timer = setTimeout(() => {
-        if (!aiAnalysis && !loadingAI) {
-          runAIAnalysis()
-        }
+        if (!aiAnalysis && !loadingAI) runAIAnalysis()
       }, 1000)
       return () => clearTimeout(timer)
     }
   }, [mentions.length, loadingMentions, loadingSocial])
 
-  // Monitoramento
+  // Monitoring
   const handleRunMonitoring = async () => {
-    if (!currentPolitician) {
-      toast.error('Selecione um político primeiro')
-      return
-    }
-
-    toast.info(`Buscando notícias e redes sociais...`)
-
+    if (!currentPolitician) { toast.error('Selecione um político'); return }
+    toast.info('Buscando notícias e redes sociais...')
     try {
       const result = await runMonitoring(currentPolitician)
-
-      // Busca redes sociais também
       await fetchSocialNetworks(currentPolitician)
-
-      if (result.newMentions > 0) {
-        toast.success(`${result.newMentions} novas menções encontradas!`)
-      } else {
-        toast.info('Nenhuma nova menção encontrada')
-      }
-
+      if (result.newMentions > 0) toast.success(`${result.newMentions} novas menções!`)
+      else toast.info('Nenhuma nova menção encontrada')
       refetchMentions()
       refetchStats()
-    } catch (error) {
-      toast.error('Erro ao buscar dados')
-    }
+    } catch { toast.error('Erro ao buscar dados') }
   }
 
-  // Cálculos usando o novo sistema de score V2
+  // Score calculation
   const scoreResult: ScoreResult = calculateScore({
     mentions: mentions.map(m => ({
       sentiment: m.sentiment as 'positivo' | 'negativo' | 'neutro',
@@ -405,40 +283,16 @@ export default function DashboardPro() {
     })),
     youtubeVideos: socialResults.youtube?.posts?.map(p => ({
       sentiment: p.sentiment as 'positivo' | 'negativo' | 'neutro',
-      viewCount: p.views,
-      likeCount: p.likes
+      viewCount: p.views, likeCount: p.likes
     })) || []
   })
 
   const score = scoreResult.score
+  const scoreHistory = generateScoreHistory(mentions, chartPeriod)
 
-  const periodDays: Record<number, number> = {
-    7: 7, 15: 15, 30: 30, 90: 90
-  }
-  const scoreHistory = generateScoreHistory(mentions, periodDays[chartPeriod] || chartPeriod)
+  const alertResult = getAlertLevel(score, scoreResult.breakdown.negativeMentions, scoreResult.breakdown.totalMentions)
 
-  // Usa o novo sistema de alertas
-  const alertResult = getAlertLevel(
-    score,
-    scoreResult.breakdown.negativeMentions,
-    scoreResult.breakdown.totalMentions
-  )
-  const alertLevel = alertResult.level
-  const alertMessage = alertResult.reason
-
-  // Usa insights da IA quando disponível, senão usa análise local
-  const insights = aiAnalysis
-    ? {
-        summary: aiAnalysis.summary,
-        recommendations: aiAnalysis.recommendations,
-        alertLevel: aiAnalysis.alertLevel,
-        alertReason: aiAnalysis.alertReason,
-        risks: aiAnalysis.risks,
-        opportunities: aiAnalysis.opportunities
-      }
-    : generateAIInsights(mentions, socialResults, score)
-
-  // Prepara dados das redes (V1: apenas Mídia + YouTube)
+  // Network data (V1: Mídia + YouTube)
   const networkData = {
     midia: {
       mencoes: mentions.filter(m => !m.source_name?.toLowerCase().includes('youtube')).length,
@@ -460,7 +314,7 @@ export default function DashboardPro() {
     }
   }
 
-  // Calcula scores por rede
+  // Calculate per-network scores
   Object.keys(networkData).forEach(key => {
     const data = networkData[key as keyof typeof networkData]
     const total = data.sentimento_positivo + data.sentimento_negativo + data.sentimento_neutro
@@ -470,7 +324,7 @@ export default function DashboardPro() {
     }
   })
 
-  // Prepara dados do relatório para exportação
+  // Report data
   const reportData: ReportData = {
     politicianName: currentPolitician?.name || 'Político',
     party: currentPolitician?.party,
@@ -479,12 +333,12 @@ export default function DashboardPro() {
     time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
     totalMentions: stats?.total || 0,
     sentimentScore: aiAnalysis?.sentimentScore || Math.round(score / 10),
-    alertLevel: (aiAnalysis?.alertLevel || alertLevel) as 'verde' | 'amarelo' | 'vermelho',
-    alertMessage: aiAnalysis?.alertReason || alertMessage,
-    summary: insights.summary,
-    topNews: (aiAnalysis?.topNews || mentions.slice(0, 3)).map((item: any, idx) => ({
+    alertLevel: (aiAnalysis?.alertLevel || alertResult.level) as 'verde' | 'amarelo' | 'vermelho',
+    alertMessage: aiAnalysis?.alertReason || alertResult.reason,
+    summary: aiAnalysis?.summary || `${mentions.length} menções encontradas.`,
+    topNews: (aiAnalysis?.topNews || mentions.slice(0, 3)).map((item: any) => ({
       title: item.title || 'Sem título',
-      source: item.source || item.source_name || 'Fonte desconhecida',
+      source: item.source || item.source_name || 'Fonte',
       sentiment: item.sentiment || 'neutro',
       url: item.url || '#'
     })),
@@ -495,19 +349,7 @@ export default function DashboardPro() {
       negative: data.sentimento_negativo,
       score: data.score
     })),
-    aiRecommendation: insights.recommendations?.join('. ') || 'Continue monitorando diariamente.'
-  }
-
-  // Função para exportar PDF
-  const handleExportPDF = () => {
-    printReport(reportData)
-    toast.success('Relatório aberto para impressão')
-  }
-
-  // Função para compartilhar via WhatsApp
-  const handleShareWhatsApp = () => {
-    shareViaWhatsApp(reportData)
-    toast.success('WhatsApp aberto para compartilhamento')
+    aiRecommendation: aiAnalysis?.recommendations?.join('. ') || 'Continue monitorando diariamente.'
   }
 
   // Loading
@@ -519,11 +361,11 @@ export default function DashboardPro() {
     )
   }
 
-  // Sem político
+  // No politicians
   if (!politicians || politicians.length === 0) {
     return (
       <div className="min-h-screen bg-background">
-        <Header user={user} onLogout={handleLogout} onHome={() => navigate('/')} />
+        <DashboardHeader user={user} onLogout={handleLogout} onHome={() => navigate('/')} />
         <main className="container mx-auto px-4 py-12">
           <Card className="max-w-md mx-auto text-center">
             <CardContent className="pt-8 pb-8">
@@ -531,9 +373,7 @@ export default function DashboardPro() {
                 <BarChart3 className="h-8 w-8 text-primary" />
               </div>
               <h2 className="text-xl font-semibold mb-2">Nenhum político cadastrado</h2>
-              <p className="text-muted-foreground mb-6">
-                Cadastre um político para começar o monitoramento 360°
-              </p>
+              <p className="text-muted-foreground mb-6">Cadastre um político para começar o monitoramento</p>
               <Button onClick={() => navigate('/add-politician')} size="lg">
                 <Plus className="h-4 w-4 mr-2" />
                 Cadastrar Político
@@ -547,166 +387,52 @@ export default function DashboardPro() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <Header user={user} onLogout={handleLogout} onHome={() => navigate('/')} />
+      <DashboardHeader user={user} onLogout={handleLogout} onHome={() => navigate('/')} />
 
       <main className="container mx-auto px-4 py-6">
         {/* Toolbar */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
-          <Tabs
-            value={String(selectedPolitician)}
-            onValueChange={(v) => setSelectedPolitician(Number(v))}
-          >
-            <TabsList>
-              {politicians.map(p => (
-                <TabsTrigger key={p.id} value={String(p.id)}>
-                  {p.nickname || p.name.split(' ')[0]}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </Tabs>
+        <DashboardToolbar
+          politicians={politicians}
+          selectedId={selectedPolitician}
+          onSelectPolitician={setSelectedPolitician}
+          onRefresh={handleRunMonitoring}
+          onAddPolitician={() => navigate('/add-politician')}
+          onOpenReport={() => setShowReportModal(true)}
+          isRefreshing={isMonitoring || loadingSocial}
+          hasMentions={mentions.length > 0}
+        />
 
-          <div className="flex items-center gap-2">
-            <Button
-              onClick={handleRunMonitoring}
-              disabled={isMonitoring || loadingSocial}
-              className="bg-gradient-to-r from-primary to-accent hover:opacity-90"
-            >
-              {isMonitoring || loadingSocial ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Buscando...
-                </>
-              ) : (
-                <>
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                  Atualizar Dados
-                </>
-              )}
-            </Button>
-            {isAIConfigured() && (
-              <Button
-                variant="outline"
-                onClick={runAIAnalysis}
-                disabled={loadingAI || mentions.length === 0}
-                title="Gerar análise com IA"
-              >
-                {loadingAI ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Analisando...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="h-4 w-4 mr-2" />
-                    Análise IA
-                  </>
-                )}
-              </Button>
-            )}
-            <Dialog open={showReportModal} onOpenChange={setShowReportModal}>
-              <DialogTrigger asChild>
-                <Button variant="outline" disabled={mentions.length === 0}>
-                  <FileDown className="h-4 w-4 mr-2" />
-                  Relatório
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>Relatório Diário</DialogTitle>
-                </DialogHeader>
-                <DailyReport
-                  politicianName={reportData.politicianName}
-                  party={reportData.party}
-                  cargo={reportData.cargo}
-                  date={reportData.date}
-                  time={reportData.time}
-                  totalMentions={reportData.totalMentions}
-                  sentimentScore={reportData.sentimentScore}
-                  alertLevel={reportData.alertLevel}
-                  alertMessage={reportData.alertMessage}
-                  summary={reportData.summary}
-                  topNews={reportData.topNews.map((n, i) => ({
-                    id: String(i),
-                    ...n,
-                    sentiment: n.sentiment as 'positivo' | 'negativo' | 'neutro'
-                  }))}
-                  aiRecommendation={reportData.aiRecommendation}
-                  onExportPDF={handleExportPDF}
-                  onShare={handleShareWhatsApp}
-                />
-              </DialogContent>
-            </Dialog>
-            <Button variant="outline" onClick={() => navigate('/add-politician')}>
-              <Plus className="h-4 w-4 mr-2" />
-              Novo
-            </Button>
-          </div>
-        </div>
+        {/* Alert Banner */}
+        <AlertBanner nivel={alertResult.level} motivo={alertResult.reason} className="mb-6" />
 
-        {/* Banner de Alerta */}
-        <AlertBanner nivel={alertLevel as any} motivo={alertMessage} className="mb-6" />
+        {/* Score + Stats */}
+        <StatsRow
+          score={score}
+          scoreResult={scoreResult}
+          totalMentions={stats?.total || 0}
+          positiveMentions={stats?.positive || 0}
+          negativeMentions={stats?.negative || 0}
+          positivePercent={stats?.positivePercentage || 0}
+          negativePercent={stats?.negativePercentage || 0}
+        />
 
-        {/* Score Principal + Informações */}
-        <div className="grid lg:grid-cols-4 gap-6 mb-6">
-          {/* Score Gauge */}
-          <div className="lg:col-span-1">
-            <Card className="h-full">
-              <CardContent className="p-6 flex flex-col items-center justify-center">
-                <h3 className="text-sm font-medium text-muted-foreground mb-2">Score de Imagem</h3>
-                <ScoreGauge score={score} size={180} />
-                <div className="text-center mt-2">
-                  <p className="text-sm text-muted-foreground">
-                    {scoreResult.breakdown.totalMentions} menções analisadas
-                  </p>
-                  <Badge
-                    variant="outline"
-                    className={`mt-1 text-xs ${
-                      scoreResult.confidence === 'alta'
-                        ? 'bg-green-50 text-green-700 border-green-200'
-                        : scoreResult.confidence === 'media'
-                          ? 'bg-yellow-50 text-yellow-700 border-yellow-200'
-                          : 'bg-gray-50 text-gray-600 border-gray-200'
-                    }`}
-                  >
-                    Confiança {scoreResult.confidence}
-                  </Badge>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Gráfico de Evolução */}
-          <div className="lg:col-span-3">
-            <ScoreChart
-              data={scoreHistory}
-              period={chartPeriod}
-              onPeriodChange={setChartPeriod}
-            />
-          </div>
-        </div>
-
-        {/* Análise de IA - Logo após o Score/Gráfico */}
+        {/* Evolution Chart (full width) */}
         <div className="mb-6">
-          <InsightsSection
-            summary={insights.summary}
-            recommendations={insights.recommendations}
-            risks={aiAnalysis?.risks}
-            opportunities={aiAnalysis?.opportunities}
-            isLoading={loadingMentions || loadingAI}
-            isAIGenerated={!!aiAnalysis}
+          <ScoreChart
+            data={scoreHistory}
+            period={chartPeriod}
+            onPeriodChange={setChartPeriod}
           />
         </div>
 
-        {/* Cards das Redes Sociais */}
+        {/* Network Cards (side by side) */}
         <div className="mb-6">
           <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
             <Zap className="h-5 w-5 text-accent" />
             Monitoramento por Rede
           </h2>
-
           {loadingSocial ? (
-            <div className="grid md:grid-cols-2 gap-6">
+            <div className="grid md:grid-cols-2 gap-4">
               {[1, 2].map(i => (
                 <Card key={i}>
                   <CardContent className="p-4">
@@ -718,74 +444,67 @@ export default function DashboardPro() {
               ))}
             </div>
           ) : (
-            <div className="grid md:grid-cols-2 gap-6">
+            <div className="grid md:grid-cols-2 gap-4">
               <NetworkCard rede="midia" data={networkData.midia} icon={networkIcons.midia} />
               <NetworkCard rede="youtube" data={networkData.youtube} icon={networkIcons.youtube} />
             </div>
           )}
         </div>
 
-        {/* Menções Recentes */}
-        <div className="mt-6">
+        {/* Mentions List (compact) */}
+        <div>
           <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
             <Newspaper className="h-5 w-5" />
-            Últimas Menções na Mídia
+            Últimas Menções
           </h2>
-
-          {loadingMentions ? (
-            <div className="space-y-3">
-              {[1, 2, 3].map(i => (
-                <Card key={i}>
-                  <CardContent className="p-4">
-                    <Skeleton className="h-5 w-3/4 mb-2" />
-                    <Skeleton className="h-4 w-full" />
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          ) : mentions.length > 0 ? (
-            <div className="grid md:grid-cols-2 gap-4">
-              {mentions.slice(0, 10).map(mention => (
-                <MentionCard key={mention.id} mention={mention} />
-              ))}
-            </div>
-          ) : (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <Newspaper className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <h3 className="font-medium mb-2">Nenhuma menção ainda</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Clique em "Atualizar Dados" para buscar notícias
-                </p>
-                <Button onClick={handleRunMonitoring} disabled={isMonitoring}>
-                  <Play className="h-4 w-4 mr-2" />
-                  Buscar Agora
-                </Button>
-              </CardContent>
-            </Card>
-          )}
+          <MentionList
+            mentions={mentions}
+            isLoading={loadingMentions}
+            isMonitoring={isMonitoring}
+            onRunMonitoring={handleRunMonitoring}
+          />
         </div>
       </main>
+
+      {/* Report Modal */}
+      <Dialog open={showReportModal} onOpenChange={setShowReportModal}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Relatório Diário</DialogTitle>
+          </DialogHeader>
+          <DailyReport
+            politicianName={reportData.politicianName}
+            party={reportData.party}
+            cargo={reportData.cargo}
+            date={reportData.date}
+            time={reportData.time}
+            totalMentions={reportData.totalMentions}
+            sentimentScore={reportData.sentimentScore}
+            alertLevel={reportData.alertLevel}
+            alertMessage={reportData.alertMessage}
+            summary={reportData.summary}
+            topNews={reportData.topNews.map((n, i) => ({
+              id: String(i), ...n,
+              sentiment: n.sentiment as 'positivo' | 'negativo' | 'neutro'
+            }))}
+            aiRecommendation={reportData.aiRecommendation}
+            onExportPDF={() => { printReport(reportData); toast.success('Relatório aberto') }}
+            onShare={() => { shareViaWhatsApp(reportData); toast.success('WhatsApp aberto') }}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
 
 // Header Component
-function Header({
-  user,
-  onLogout,
-  onHome
-}: {
-  user: any
-  onLogout: () => void
-  onHome: () => void
-}) {
+function DashboardHeader({ user, onLogout, onHome }: { user: any; onLogout: () => void; onHome: () => void }) {
   return (
     <header className="border-b bg-card sticky top-0 z-50">
       <div className="container mx-auto px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary to-accent flex items-center justify-center">
-            <BarChart3 className="h-5 w-5 text-white" />
+            <BarChart3 className="h-5 w-5 text-primary-foreground" />
           </div>
           <div>
             <h1 className="font-bold text-lg">Radar Político</h1>
@@ -793,63 +512,12 @@ function Header({
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {user && (
-            <span className="text-xs text-muted-foreground hidden sm:block">
-              {user.email}
-            </span>
-          )}
-          <Button variant="ghost" size="icon" onClick={onHome}>
-            <Home className="h-4 w-4" />
-          </Button>
-          <Button variant="outline" size="icon">
-            <Bell className="h-4 w-4" />
-          </Button>
-          <Button variant="ghost" size="icon" onClick={onLogout} title="Sair">
-            <LogOut className="h-4 w-4" />
-          </Button>
+          {user && <span className="text-xs text-muted-foreground hidden sm:block">{user.email}</span>}
+          <Button variant="ghost" size="icon" onClick={onHome}><Home className="h-4 w-4" /></Button>
+          <Button variant="outline" size="icon"><Bell className="h-4 w-4" /></Button>
+          <Button variant="ghost" size="icon" onClick={onLogout} title="Sair"><LogOut className="h-4 w-4" /></Button>
         </div>
       </div>
     </header>
-  )
-}
-
-// Mention Card Component
-function MentionCard({ mention }: { mention: Mention }) {
-  const sentimentConfig = {
-    positivo: { bg: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300', icon: TrendingUp },
-    negativo: { bg: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300', icon: TrendingDown },
-    neutro: { bg: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300', icon: Minus }
-  }
-  const config = sentimentConfig[mention.sentiment as keyof typeof sentimentConfig] || sentimentConfig.neutro
-  const Icon = config.icon
-
-  return (
-    <Card className="hover:shadow-md transition-all hover:border-primary/20 cursor-pointer"
-      onClick={() => mention.url && window.open(mention.url, '_blank', 'noopener,noreferrer')}>
-      <CardContent className="p-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-2 flex-wrap">
-              <Badge variant="outline" className="text-xs">{mention.source_name || 'Notícia'}</Badge>
-              <Badge className={`text-xs ${config.bg}`}>
-                <Icon className="h-3 w-3 mr-1" />
-                {mention.sentiment}
-              </Badge>
-            </div>
-            <h4 className="font-medium text-sm line-clamp-2">{mention.title || 'Sem título'}</h4>
-            <p className="text-xs text-muted-foreground line-clamp-2 mt-1">
-              {mention.summary || mention.content?.substring(0, 150)}
-            </p>
-            <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
-              <Clock className="h-3 w-3" />
-              {new Date(mention.published_at || mention.created_at).toLocaleDateString('pt-BR', {
-                day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'
-              })}
-            </div>
-          </div>
-          <ExternalLink className="h-4 w-4 text-muted-foreground shrink-0" />
-        </div>
-      </CardContent>
-    </Card>
   )
 }
