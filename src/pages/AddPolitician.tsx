@@ -53,14 +53,20 @@ export default function AddPolitician() {
     city: '',
     whatsapp: '',
     email: '',
-    searchTerms: '', // Termos de busca (separados por vírgula)
-    excludeTerms: '' // Termos de exclusão (separados por vírgula)
+    searchTerms: '' // Termos de busca (separados por vírgula)
   })
 
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const handleChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }))
+    setFormData(prev => {
+      const updated = { ...prev, [field]: value }
+      // Auto-preencher termos de busca com nome completo
+      if (field === 'name' && !prev.searchTerms) {
+        updated.searchTerms = value.trim()
+      }
+      return updated
+    })
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -80,8 +86,7 @@ export default function AddPolitician() {
         return
       }
 
-      // Processa termos de busca e exclusão
-      // Termos normais são incluídos, termos com prefixo "-" são exclusões
+      // Processa termos de busca
       const parseTerms = (text: string): string[] => {
         if (!text.trim()) return []
         return text.split(',')
@@ -90,10 +95,7 @@ export default function AddPolitician() {
       }
 
       const searchTerms = parseTerms(formData.searchTerms)
-      const excludeTerms = parseTerms(formData.excludeTerms).map(t => `-${t}`) // Prefixo - para exclusão
-
-      // Combina ambos os arrays no campo keywords
-      const allKeywords = [...searchTerms, ...excludeTerms]
+      const allKeywords = searchTerms
 
       const newPolitician: PoliticianInsert = {
         user_id: userId,
@@ -242,30 +244,13 @@ export default function AddPolitician() {
                     </Label>
                     <Textarea
                       id="searchTerms"
-                      placeholder="Ex: Bolsominion, Mito, Capitão (separados por vírgula)"
+                      placeholder="Ex: Deputado Silva, Dr. Silva, Silva Neto (separados por vírgula)"
                       value={formData.searchTerms}
                       onChange={(e) => handleChange('searchTerms', e.target.value)}
                       className="min-h-[80px]"
                     />
                     <p className="text-xs text-muted-foreground">
-                      Apelidos, hashtags ou variações do nome que devem ser incluídos na busca
-                    </p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="excludeTerms" className="flex items-center gap-2">
-                      <Ban className="h-4 w-4 text-red-500" />
-                      Termos de Exclusão
-                    </Label>
-                    <Textarea
-                      id="excludeTerms"
-                      placeholder="Ex: futebol, novela, BBB, show, jogador (separados por vírgula)"
-                      value={formData.excludeTerms}
-                      onChange={(e) => handleChange('excludeTerms', e.target.value)}
-                      className="min-h-[80px]"
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Termos que indicam conteúdo irrelevante (homônimos, esportes, entretenimento)
+                      Apelidos, variações do nome ou cargo que devem ser incluídos na busca
                     </p>
                   </div>
                 </div>
