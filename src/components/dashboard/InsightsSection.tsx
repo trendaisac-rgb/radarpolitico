@@ -24,6 +24,9 @@ export interface InsightsSectionProps {
   opportunities?: string[] | null
   isLoading?: boolean
   isAIGenerated?: boolean
+  // Novos campos para análise profunda
+  historiaDoDia?: string | null
+  fatosRelevantes?: string[] | null
 }
 
 export function InsightsSection({
@@ -34,11 +37,13 @@ export function InsightsSection({
   risks,
   opportunities,
   isLoading,
-  isAIGenerated
+  isAIGenerated,
+  historiaDoDia,
+  fatosRelevantes
 }: InsightsSectionProps) {
   const resolvedSumario = sumario || summary || null
   const resolvedRecomendacoes = recomendacoes || recommendations || null
-  const hasContent = resolvedSumario || (resolvedRecomendacoes && resolvedRecomendacoes.length > 0)
+  const hasContent = resolvedSumario || (resolvedRecomendacoes && resolvedRecomendacoes.length > 0) || historiaDoDia
 
   if (isLoading) {
     return (
@@ -90,20 +95,63 @@ export function InsightsSection({
         </div>
       )}
 
-      <div className="grid md:grid-cols-2 gap-6">
-        {/* Resumo */}
+      {/* História do Dia - Destaque Principal */}
+      {historiaDoDia && (
+        <Card className="shadow-lg border-l-4 border-l-primary bg-gradient-to-r from-primary/5 to-transparent">
+          <CardContent className="py-4">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                <Brain className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1 font-medium">
+                  História do Dia
+                </p>
+                <p className="text-lg font-semibold leading-snug">
+                  {historiaDoDia}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Fatos Relevantes */}
+      {fatosRelevantes && fatosRelevantes.length > 0 && (
         <Card className="shadow-lg">
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-orange-500" />
+              Fatos Citados na Mídia
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="space-y-2">
+              {fatosRelevantes.slice(0, 5).map((fato, index) => (
+                <li key={index} className="text-sm text-muted-foreground flex gap-2">
+                  <span className="text-primary font-medium">•</span>
+                  <span>{fato}</span>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
+
+      <div className="grid md:grid-cols-2 gap-6">
+        {/* Resumo */}
+        <Card className="shadow-lg md:col-span-2">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
               <FileText className="h-4 w-4 text-primary" />
-              Resumo Executivo
+              Briefing Executivo
             </CardTitle>
           </CardHeader>
           <CardContent>
             {resolvedSumario ? (
-              <p className="text-sm text-muted-foreground leading-relaxed">
+              <div className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
                 {resolvedSumario}
-              </p>
+              </div>
             ) : (
               <p className="text-sm text-muted-foreground italic">
                 Resumo não disponível

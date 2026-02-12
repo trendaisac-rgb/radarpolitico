@@ -62,7 +62,9 @@ export interface AIAnalysisResult {
     action: string
   }>
   opportunities: string[]
-  // Novos campos para análise profunda
+  // Campos para análise profunda
+  historiaDoDia: string // A manchete do dia
+  fatosRelevantes: string[] // Fatos específicos citados nas notícias
   narrativaDominante: string
   temasCriticos: string[]
   tonDaCobertura: string
@@ -81,39 +83,34 @@ export interface DailyReportData {
 // PERSONA: ANALISTA POLÍTICO SÊNIOR
 // ============================================
 
-const ANALYST_PERSONA = `Você é CARLOS MENDES, um Analista Político Sênior com 25 anos de experiência na política brasileira.
+const ANALYST_PERSONA = `Você é CARLOS MENDES, Analista Político Sênior com 25 anos em Brasília.
 
-## SUA TRAJETÓRIA
-- Ex-assessor de comunicação de 3 governadores e 2 ministros
-- Consultor de campanhas eleitorais desde 1998
-- Especialista em gestão de crises e monitoramento de mídia
-- Colunista político em grandes veículos por 15 anos
-- Conhece profundamente o cenário político brasileiro de Brasília ao interior
+## QUEM VOCÊ É
+- Ex-assessor de comunicação de governadores e ministros
+- Consultor de campanhas desde 1998
+- Especialista em gestão de crises políticas
+- Seus clientes pagam R$3.000/mês pelo seu trabalho — entregue valor correspondente
 
-## SEU ESTILO DE ANÁLISE
-Você NÃO é um robô que conta menções. Você é um ANALISTA que:
-1. LÊ cada notícia e entende o CONTEXTO político
-2. Identifica NARRATIVAS e tendências na cobertura
-3. Avalia o IMPACTO REAL na imagem do político
-4. Dá recomendações PRÁTICAS como faria para um cliente
+## O QUE DIFERENCIA SEU TRABALHO
 
-## PRINCÍPIOS INEGOCIÁVEIS
+Você NÃO faz análise genérica de "sentimento positivo/negativo". Qualquer estagiário faz isso.
 
-### APARTIDÁRIO ABSOLUTO
-- Você NÃO tem preferência partidária. PSOL, PT, PL, MDB, PP, UNIÃO - todos são analisados com os MESMOS critérios.
-- Você analisa PERCEPÇÃO PÚBLICA e TOM DA MÍDIA, não mérito ideológico.
-- Uma CPI contra político de direita é analisada com os mesmos critérios de uma CPI contra político de esquerda.
-- Crítica de oposição é tratada igual a crítica de aliados.
+Você faz INTELIGÊNCIA POLÍTICA:
+1. **CRUZA os dados** — Se 3 veículos falam sobre o mesmo tema, isso É a história do dia
+2. **CITA notícias específicas** — "O Estadão reportou X, corroborado pelo G1 que detalhou Y"
+3. **IDENTIFICA conexões** — Pessoas, empresas, investigações, alianças
+4. **ENTREGA insight acionável** — O cliente lê seu relatório e SABE exatamente o que está acontecendo
 
-### ANÁLISE DE IMPACTO, NÃO DE MÉRITO
-- Você avalia se a cobertura FORTALECE ou ENFRAQUECE a imagem pública.
-- NÃO julga se a política do político é "boa" ou "ruim".
-- Exemplo: "Ministro aumenta impostos" - você analisa como a MÍDIA cobriu (positiva, negativa, neutra) e o IMPACTO na percepção, não se aumentar imposto é certo ou errado.
+## PRINCÍPIOS
 
-### BASEADO EM EVIDÊNCIAS
-- CITE os artigos específicos que embasam sua análise.
-- NÃO invente dados. Se não há evidência, diga "dados insuficientes".
-- Se só há 2-3 menções, reconheça que a amostra é limitada.`
+### APARTIDÁRIO
+- PT, PL, PSOL, MDB — mesmos critérios para todos
+- Analisa IMPACTO NA IMAGEM, não mérito ideológico
+
+### BASEADO EM FATOS
+- CITE títulos e fontes específicas
+- NÃO generalize — seja específico
+- Se não há dados, diga "dados insuficientes"`
 
 // ============================================
 // PROMPT PRINCIPAL
@@ -123,98 +120,121 @@ const ANALYSIS_PROMPT = `${ANALYST_PERSONA}
 
 ## SUA TAREFA
 
-Analise a cobertura de mídia do político fornecido e produza um RELATÓRIO EXECUTIVO como você faria para um cliente real.
+Produza um BRIEFING DE INTELIGÊNCIA POLÍTICA que justifique R$3.000/mês de assinatura.
 
-### O QUE VOCÊ DEVE FAZER:
+## O QUE VOCÊ DEVE ENTREGAR
 
-1. **LER CADA NOTÍCIA** - Analise o título e conteúdo para entender O QUE está sendo dito sobre o político.
+### 1. HISTÓRIA DO DIA (Obrigatório)
+Identifique A história principal que está movendo a cobertura. Exemplos:
+- "Toffoli é ligado ao caso Banco Master — conexão com Daniel Vorcaro ganha destaque"
+- "Ministro enfrenta rebelião na base após veto a emenda"
+- "Governador inaugura maior hospital do estado — cobertura amplamente positiva"
 
-2. **IDENTIFICAR A NARRATIVA DOMINANTE** - Qual é a "história" que a mídia está contando sobre esse político hoje? Exemplos:
-   - "Ministro enfrenta resistência no Congresso"
-   - "Governador inaugura obras e colhe apoio popular"
-   - "Deputado envolvido em polêmica sobre declarações"
+CRUZE os dados: se 3+ veículos falam do mesmo assunto, ESSE é o tema central.
 
-3. **CLASSIFICAR CADA MENÇÃO** (APARTIDÁRIO):
-   - **POSITIVO**: Cobertura que FORTALECE a imagem (elogios, conquistas, apoio, realizações)
-   - **NEGATIVO**: Cobertura que ENFRAQUECE a imagem (críticas, escândalos, falhas, rejeição)
-   - **NEUTRO**: Cobertura factual sem tom claro, ou baixo impacto na imagem
+### 2. RESUMO EXECUTIVO (Obrigatório)
+NO RESUMO, você DEVE:
+- **CITAR notícias específicas pelo título** — "Segundo reportagem 'Título X' do Estadão..."
+- **NOMEAR pessoas e entidades envolvidas** — empresários, bancos, investigações, aliados
+- **CONECTAR os fatos** — "A mesma fonte citada pelo G1 aparece na reportagem da Folha..."
+- **EXPLICAR o impacto** — O que isso significa para a imagem do político
 
-4. **DAR O SCORE DE 0 A 100**:
-   - 90-100: Cobertura excepcional, político em momento de ouro
-   - 70-89: Cobertura muito favorável, capital político alto
-   - 50-69: Cobertura equilibrada ou levemente positiva
-   - 30-49: Cobertura com tendência negativa, desgaste perceptível
-   - 10-29: Cobertura majoritariamente crítica, crise em formação
-   - 0-9: Crise severa de imagem, cobertura devastadora
+EXEMPLO DE RESUMO BOM:
+"A cobertura de hoje é dominada pelo caso Banco Master. A reportagem 'Toffoli manteve contato com Vorcaro durante julgamento' (Estadão) detalha que o ministro teria se encontrado com o empresário Daniel Vorcaro em jantar reservado. O G1 corrobora com 'PF amplia investigação sobre relação entre STF e setor financeiro'. O YouTube mostra 4 vídeos críticos, sendo o de maior alcance 'A verdade sobre Toffoli e o Banco Master' (Canal X, 250K views). Score 28/100 — situação crítica que demanda posicionamento."
 
-5. **RESUMIR O QUE ESTÁ SENDO DITO** - Não diga "20 menções positivas". Diga "A mídia destacou a inauguração da nova escola, com tom favorável no G1 e Estadão. A oposição criticou o custo da obra, mas a cobertura geral foi positiva."
+EXEMPLO DE RESUMO RUIM (NÃO FAÇA ISSO):
+"A cobertura apresenta 15 menções, sendo 8 negativas e 7 neutras. O tom é predominantemente crítico. Recomenda-se monitoramento."
 
-## FORMATO DE RESPOSTA (JSON):
+### 3. SCORE (0-100)
+- 80-100: Momento de ouro — capitalize
+- 60-79: Cenário favorável — mantenha
+- 40-59: Equilibrado — atenção
+- 20-39: Desgaste — ação necessária
+- 0-19: Crise severa — resposta imediata
+
+### 4. CLASSIFICAÇÃO DE SENTIMENTO
+Para CADA notícia, classifique (APARTIDÁRIO):
+- **POSITIVO**: Fortalece imagem (conquistas, elogios, apoio)
+- **NEGATIVO**: Enfraquece imagem (críticas, escândalos, investigações)
+- **NEUTRO**: Factual sem impacto claro
+
+## FORMATO JSON
 
 {
-  "summary": "RELATÓRIO EXECUTIVO (15-25 frases): Comece com a NARRATIVA DOMINANTE do dia. O que a mídia está falando? Quais os temas principais? Como isso afeta a imagem? Cite veículos e notícias específicas. Finalize com avaliação do cenário.",
+  "summary": "BRIEFING EXECUTIVO (20-30 frases). OBRIGATÓRIO: Cite títulos de notícias específicas, nomes de pessoas/empresas envolvidas, e cruze informações entre fontes. Seu cliente paga R$3000/mês — entregue inteligência, não estatísticas.",
 
-  "narrativaDominante": "Uma frase que resume a 'história' da mídia sobre o político hoje",
+  "historiaDoDia": "A MANCHETE que resume o que está acontecendo hoje. Ex: 'Toffoli sob pressão por ligação com Banco Master' ou 'Ministro colhe frutos de programa social bem-sucedido'",
 
-  "temasCriticos": ["Lista dos temas mais sensíveis que requerem atenção"],
+  "fatosRelevantes": [
+    "Fato 1: Nome, empresa, situação específica citada nas notícias",
+    "Fato 2: Conexão identificada entre reportagens",
+    "Fato 3: Dado numérico ou declaração importante"
+  ],
 
-  "tonDaCobertura": "Descrição qualitativa do tom geral: 'Predominantemente crítico com foco em...', 'Favorável destacando...', 'Factual e neutro sobre...'",
+  "narrativaDominante": "Descrição da narrativa que a mídia está construindo",
+
+  "temasCriticos": ["Temas que podem escalar ou já são sensíveis"],
+
+  "tonDaCobertura": "Descrição qualitativa com exemplos: 'Crítico, focado na relação com o setor bancário — Estadão e Folha lideram cobertura negativa'",
 
   "overallSentiment": "positivo|negativo|neutro|misto",
 
-  "sentimentScore": "NÚMERO DE 0 A 100 baseado na sua análise profissional",
+  "sentimentScore": 0-100,
 
   "alertLevel": "verde|amarelo|vermelho",
-  "alertReason": "Explicação profissional do nível de alerta",
+  "alertReason": "Justificativa baseada em fatos específicos",
 
   "topNews": [
     {
-      "title": "Título da notícia",
+      "title": "Título EXATO da notícia",
       "source": "Veículo",
       "sentiment": "positivo|negativo|neutro",
-      "relevance": "Por que essa notícia importa? Qual o impacto na imagem?",
+      "relevance": "Por que essa notícia é importante? Quem é citado? Qual a conexão com outros fatos?",
       "url": "URL"
     }
   ],
 
-  "mainTopics": ["Temas principais da cobertura"],
+  "mainTopics": ["Tópicos identificados com base nos títulos reais"],
 
   "recommendations": [
-    "Recomendação estratégica 1 - específica e acionável",
-    "Recomendação estratégica 2 - como um consultor real faria"
+    "Ação 1: Específica e baseada nos fatos identificados",
+    "Ação 2: Como você aconselharia um cliente pagando R$3000/mês"
   ],
 
   "networkScores": [
     {
-      "network": "Mídia|YouTube",
-      "score": "0-100",
+      "network": "Mídia",
+      "score": 0-100,
       "trend": "subindo|descendo|estavel",
-      "insight": "Análise específica dessa fonte"
+      "insight": "Análise com citação de veículos específicos"
+    },
+    {
+      "network": "YouTube",
+      "score": 0-100,
+      "trend": "subindo|descendo|estavel",
+      "insight": "Análise com citação de canais e vídeos específicos"
     }
   ],
 
   "risks": [
     {
-      "description": "Risco identificado com base na cobertura",
+      "description": "Risco específico baseado em fatos das notícias",
       "severity": "baixo|medio|alto",
-      "action": "O que fazer para mitigar"
+      "action": "Recomendação concreta"
     }
   ],
 
-  "opportunities": ["Oportunidades identificadas na cobertura"]
+  "opportunities": ["Oportunidades identificadas com base na cobertura"]
 }
 
-## REGRAS CRÍTICAS:
+## REGRAS ABSOLUTAS
 
-1. **NÃO COMECE DO 50** - O score deve refletir sua análise real. Se a cobertura é muito negativa, pode ser 15. Se é muito positiva, pode ser 85.
-
-2. **CITE AS FONTES** - No summary, mencione os veículos e notícias específicas.
-
-3. **SEJA ESPECÍFICO** - Em vez de "menções negativas sobre economia", diga "O Estadão criticou a proposta de aumento de gastos, enquanto a Folha questionou a viabilidade fiscal."
-
-4. **V1 LIMITAÇÃO** - Este sistema monitora apenas Mídia (Google News) e YouTube. NÃO mencione Twitter, Instagram, TikTok.
-
-5. **POUCOS DADOS** - Se há menos de 3 menções, reconheça que a análise é limitada e o score tem baixa confiança.`
+1. **CITE TÍTULOS E FONTES** — No summary, SEMPRE mencione "segundo a reportagem 'X' do Y"
+2. **NOMEIE PESSOAS E ENTIDADES** — Se a notícia menciona um empresário, banco, investigação — cite pelo nome
+3. **CRUZE DADOS** — Se múltiplas fontes falam do mesmo assunto, destaque a convergência
+4. **SCORE REAL** — Não comece do 50. Se a cobertura é devastadora, o score pode ser 12.
+5. **V1** — Monitora apenas Mídia (Google News) e YouTube. NÃO mencione redes que não temos dados.
+6. **POUCOS DADOS** — Se há <3 menções, reconheça e ajuste confiança do score.`
 
 // ============================================
 // FUNÇÃO PRINCIPAL
@@ -268,63 +288,92 @@ function formatDataForAI(data: DailyReportData): string {
   const youtubeMencoes = data.mentions.filter(m => m.platform === 'youtube')
   const youtubeData = data.networks.find(n => n.network.toLowerCase().includes('youtube'))
 
-  let message = `📊 ANÁLISE SOLICITADA\n\n`
-  message += `Político: ${data.politicianName}\n`
-  if (data.party) message += `Partido: ${data.party}\n`
-  if (data.position) message += `Cargo: ${data.position}\n`
-  message += `Data: ${data.date}\n\n`
+  let message = `🎯 BRIEFING DE INTELIGÊNCIA POLÍTICA\n`
+  message += `${'═'.repeat(60)}\n\n`
 
-  message += `${'='.repeat(60)}\n`
-  message += `📰 NOTÍCIAS DA MÍDIA TRADICIONAL (${midiaMencoes.length} artigos)\n`
-  message += `${'='.repeat(60)}\n\n`
+  message += `👤 MONITORADO: ${data.politicianName.toUpperCase()}\n`
+  if (data.party) message += `   Partido: ${data.party}\n`
+  if (data.position) message += `   Cargo: ${data.position}\n`
+  message += `📅 Data: ${data.date}\n\n`
+
+  message += `${'═'.repeat(60)}\n`
+  message += `📰 NOTÍCIAS (${midiaMencoes.length} artigos) — LEIA CADA UMA\n`
+  message += `${'═'.repeat(60)}\n\n`
 
   if (midiaMencoes.length > 0) {
-    midiaMencoes.slice(0, 20).forEach((m, i) => {
-      message += `--- NOTÍCIA ${i + 1} ---\n`
-      message += `Título: ${m.title}\n`
-      message += `Fonte: ${m.source}\n`
+    midiaMencoes.slice(0, 25).forEach((m, i) => {
+      message += `┌─ NOTÍCIA ${i + 1} ────────────────────────\n`
+      message += `│ TÍTULO: "${m.title}"\n`
+      message += `│ FONTE: ${m.source}\n`
       if (m.content && m.content.length > 50) {
-        message += `Conteúdo: ${m.content.substring(0, 500)}${m.content.length > 500 ? '...' : ''}\n`
+        // Envia mais conteúdo para análise mais profunda
+        message += `│ CONTEÚDO: ${m.content.substring(0, 800)}${m.content.length > 800 ? '...' : ''}\n`
       }
-      message += `URL: ${m.url}\n`
-      message += `Publicado: ${m.publishedAt}\n\n`
+      message += `│ URL: ${m.url}\n`
+      message += `│ DATA: ${m.publishedAt}\n`
+      message += `└──────────────────────────────────────\n\n`
     })
+
+    // Identificar temas recorrentes para ajudar a IA
+    const titles = midiaMencoes.map(m => m.title.toLowerCase()).join(' ')
+    const commonThemes: string[] = []
+
+    // Detecta temas comuns
+    const themeKeywords: Record<string, string[]> = {
+      'investigação/CPI': ['investiga', 'cpi', 'inquérito', 'pf', 'polícia', 'depoimento'],
+      'economia/finanças': ['banco', 'financeiro', 'dinheiro', 'milhões', 'bilhões', 'orçamento'],
+      'escândalo': ['escândalo', 'denúncia', 'corrupção', 'fraude', 'irregularidade'],
+      'política': ['congresso', 'votação', 'projeto', 'lei', 'deputado', 'senador'],
+      'judiciário': ['stf', 'supremo', 'ministro', 'decisão', 'julgamento', 'processo']
+    }
+
+    Object.entries(themeKeywords).forEach(([theme, keywords]) => {
+      if (keywords.some(kw => titles.includes(kw))) {
+        commonThemes.push(theme)
+      }
+    })
+
+    if (commonThemes.length > 0) {
+      message += `⚠️ TEMAS DETECTADOS NOS TÍTULOS: ${commonThemes.join(', ')}\n\n`
+    }
   } else {
-    message += `Nenhuma notícia encontrada na mídia tradicional.\n\n`
+    message += `⚪ Nenhuma notícia encontrada na mídia.\n\n`
   }
 
-  message += `${'='.repeat(60)}\n`
-  message += `🎬 VÍDEOS DO YOUTUBE\n`
-  message += `${'='.repeat(60)}\n\n`
+  message += `${'═'.repeat(60)}\n`
+  message += `🎬 YOUTUBE (vídeos mais relevantes)\n`
+  message += `${'═'.repeat(60)}\n\n`
 
   if (youtubeData?.topPosts?.length) {
     youtubeData.topPosts.slice(0, 10).forEach((p, i) => {
-      message += `--- VÍDEO ${i + 1} ---\n`
-      message += `Título: ${p.content}\n`
-      message += `Canal: ${p.author}\n`
-      message += `Engajamento: ${p.engagement.toLocaleString()} interações\n`
-      message += `URL: ${p.url}\n\n`
+      message += `┌─ VÍDEO ${i + 1} ────────────────────────\n`
+      message += `│ TÍTULO: "${p.content}"\n`
+      message += `│ CANAL: ${p.author}\n`
+      message += `│ VIEWS/ENGAJAMENTO: ${p.engagement.toLocaleString()}\n`
+      message += `│ URL: ${p.url}\n`
+      message += `└──────────────────────────────────────\n\n`
     })
   } else if (youtubeMencoes.length > 0) {
     youtubeMencoes.slice(0, 10).forEach((m, i) => {
-      message += `--- VÍDEO ${i + 1} ---\n`
-      message += `Título: ${m.title}\n`
-      message += `Canal: ${m.source}\n`
-      message += `URL: ${m.url}\n\n`
+      message += `┌─ VÍDEO ${i + 1} ────────────────────────\n`
+      message += `│ TÍTULO: "${m.title}"\n`
+      message += `│ CANAL: ${m.source}\n`
+      message += `│ URL: ${m.url}\n`
+      message += `└──────────────────────────────────────\n\n`
     })
   } else {
-    message += `Nenhum vídeo encontrado no YouTube.\n\n`
+    message += `⚪ Nenhum vídeo encontrado no YouTube.\n\n`
   }
 
-  message += `${'='.repeat(60)}\n`
-  message += `📋 INSTRUÇÕES\n`
-  message += `${'='.repeat(60)}\n\n`
-  message += `Analise as notícias e vídeos acima como um Analista Político Sênior.\n`
-  message += `- Leia cada título e conteúdo\n`
-  message += `- Identifique a narrativa dominante\n`
-  message += `- Classifique o sentimento de cada menção (APARTIDÁRIO)\n`
-  message += `- Dê um score de 0-100 baseado na sua análise\n`
-  message += `- Responda no formato JSON especificado\n`
+  message += `${'═'.repeat(60)}\n`
+  message += `📋 SUA TAREFA\n`
+  message += `${'═'.repeat(60)}\n\n`
+  message += `1. IDENTIFIQUE A HISTÓRIA DO DIA — Qual o tema central? (cruze os dados)\n`
+  message += `2. NO SUMMARY: CITE títulos de notícias específicas e nomes\n`
+  message += `3. CRUZE informações entre fontes — se aparecem em múltiplas, destaque\n`
+  message += `4. SCORE 0-100 baseado na gravidade real da cobertura\n`
+  message += `5. Responda em JSON válido\n\n`
+  message += `⚠️ LEMBRE: Seu cliente paga R$3000/mês. Entregue INTELIGÊNCIA, não estatísticas.\n`
 
   return message
 }
@@ -521,6 +570,24 @@ function analyzeLocally(data: DailyReportData): AIAnalysisResult {
     opportunities.push('Volume de cobertura neutra indica espaço para moldar narrativa favoravelmente')
   }
 
+  // Gera história do dia baseada nas notícias mais frequentes
+  let historiaDoDia = 'Monitoramento em andamento — aguardando mais dados'
+  if (totalMentions > 0 && mainTopics.length > 0) {
+    if (overallSentiment === 'negativo') {
+      historiaDoDia = `${data.politicianName} enfrenta cobertura crítica sobre ${mainTopics[0]}`
+    } else if (overallSentiment === 'positivo') {
+      historiaDoDia = `${data.politicianName} em destaque positivo — ${mainTopics[0]}`
+    } else {
+      historiaDoDia = `${data.politicianName} na pauta da mídia — ${mainTopics[0]}`
+    }
+  }
+
+  // Extrai fatos das notícias
+  const fatosRelevantes: string[] = []
+  analyzedMentions.slice(0, 5).forEach(m => {
+    fatosRelevantes.push(`${m.source}: "${m.title.substring(0, 80)}${m.title.length > 80 ? '...' : ''}"`)
+  })
+
   return {
     summary,
     overallSentiment,
@@ -546,6 +613,8 @@ function analyzeLocally(data: DailyReportData): AIAnalysisResult {
     ],
     risks,
     opportunities,
+    historiaDoDia,
+    fatosRelevantes,
     narrativaDominante,
     temasCriticos: negativeCount > 0 ? mainTopics.slice(0, 3) : [],
     tonDaCobertura: overallSentiment === 'positivo'
