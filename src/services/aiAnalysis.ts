@@ -495,8 +495,10 @@ function analyzeLocally(data: DailyReportData): AIAnalysisResult {
   let summary = ''
 
   if (totalMentions === 0) {
-    summary = `Não foram identificadas notícias relevantes sobre ${data.politicianName} nas últimas 24 horas. `
-    summary += `Momento de baixa exposição midiática — pode ser oportunidade para pautar temas favoráveis.`
+    summary = `⚠️ NÃO FOI POSSÍVEL BUSCAR NOTÍCIAS\n\n`
+    summary += `O sistema não conseguiu acessar o Google News no momento. `
+    summary += `Isso pode ser um problema temporário de conexão com os servidores de notícias.\n\n`
+    summary += `RECOMENDAÇÃO: Clique em "Atualizar" para tentar novamente em alguns minutos.`
   } else if (totalMentions < 3) {
     // Com poucas notícias, citar diretamente
     const topMention = analyzedMentions[0]

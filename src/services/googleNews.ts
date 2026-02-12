@@ -11,11 +11,14 @@ export interface NewsArticle {
   description: string
 }
 
-// Lista de proxies CORS para fallback
+// Lista expandida de proxies CORS para fallback
 const CORS_PROXIES = [
   (url: string) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
   (url: string) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
-  (url: string) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`
+  (url: string) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
+  (url: string) => `https://thingproxy.freeboard.io/fetch/${url}`,
+  (url: string) => `https://cors-anywhere.herokuapp.com/${url}`,
+  (url: string) => `https://crossorigin.me/${url}`,
 ]
 
 /**
@@ -201,43 +204,70 @@ export async function searchPoliticianNews(
 }
 
 /**
- * Remove artigos duplicados baseado na URL
+ * Remove artigos duplicados baseado no título normalizado
+ * Usa similaridade para pegar títulos quase iguais
  */
 function removeDuplicates(articles: NewsArticle[]): NewsArticle[] {
-  const seen = new Set<string>()
-  return articles.filter(article => {
-    const key = article.link || article.title
-    if (seen.has(key)) {
-      return false
+  const seen = new Map<string, NewsArticle>()
+
+  articles.forEach(article => {
+    // Normaliza o título para comparação
+    const normalizedTitle = normalizeTitle(article.title)
+
+    // Verifica se já existe um título similar
+    let isDuplicate = false
+    for (const [existingTitle] of seen) {
+      if (isSimilar(normalizedTitle, existingTitle)) {
+        isDuplicate = true
+        break
+      }
     }
-    seen.add(key)
-    return true
+
+    if (!isDuplicate) {
+      seen.set(normalizedTitle, article)
+    }
   })
+
+  return Array.from(seen.values())
 }
 
 /**
- * Gera dados de demonstração quando APIs falham
+ * Normaliza título para comparação
  */
-function generateDemoNewsData(query: string): NewsArticle[] {
-  const now = new Date()
-  const sources = ['Folha de S.Paulo', 'G1', 'UOL', 'Estadão', 'Poder360', 'CNN Brasil', 'R7']
+function normalizeTitle(title: string): string {
+  return title
+    .toLowerCase()
+    .replace(/[^a-záàâãéèêíïóôõöúçñ\s]/gi, '') // Remove pontuação
+    .replace(/\s+/g, ' ') // Normaliza espaços
+    .trim()
+    .substring(0, 50) // Pega só início para comparar
+}
 
-  const templates = [
-    `${query} se manifesta sobre medidas econômicas em entrevista exclusiva`,
-    `Repercussão: ${query} comenta decisão do STF em suas redes sociais`,
-    `${query} participa de evento em Brasília e fala sobre agenda do governo`,
-    `Aliados de ${query} articulam votação de projeto no Congresso`,
-    `${query} anuncia novos investimentos para infraestrutura`,
-    `Pesquisa mostra avaliação de ${query} entre eleitores`,
-    `${query} recebe comitiva de prefeitos para discutir verbas municipais`,
-    `Em discurso, ${query} defende reforma e critica oposição`,
-  ]
+/**
+ * Verifica se dois títulos são similares (>70% das palavras iguais)
+ */
+function isSimilar(title1: string, title2: string): boolean {
+  const words1 = new Set(title1.split(' ').filter(w => w.length > 3))
+  const words2 = new Set(title2.split(' ').filter(w => w.length > 3))
 
-  return templates.slice(0, 5).map((template, i) => ({
-    title: template,
-    link: `https://news.google.com/demo/${Date.now()}/${i}`,
-    source: sources[i % sources.length],
-    pubDate: new Date(now.getTime() - i * 3600000).toISOString(),
-    description: `${template}. Confira a cobertura completa sobre este tema no portal.`
-  }))
+  if (words1.size === 0 || words2.size === 0) return false
+
+  let matches = 0
+  words1.forEach(word => {
+    if (words2.has(word)) matches++
+  })
+
+  const similarity = matches / Math.max(words1.size, words2.size)
+  return similarity > 0.7
+}
+
+/**
+ * Quando APIs falham, retorna array vazio em vez de dados falsos
+ * DECISÃO: Melhor não ter dados do que ter dados inventados
+ */
+function generateDemoNewsData(_query: string): NewsArticle[] {
+  console.warn('⚠️ Não foi possível buscar notícias reais. Retornando array vazio.')
+  // NÃO retornamos dados falsos - isso confunde o usuário
+  // O sistema de IA vai lidar com "sem dados" de forma apropriada
+  return []
 }
