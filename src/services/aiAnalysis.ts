@@ -99,7 +99,13 @@ export interface DailyReportData {
 
 const ANALYSIS_PROMPT = `Você é um analista de MONITORAMENTO DE MÍDIA político, NÃO um analista político partidário.
 
-⚠️ REGRAS DE IMPARCIALIDADE OBRIGATÓRIAS:
+⚠️ REGRAS CRÍTICAS - LEIA COM ATENÇÃO:
+1. Você SOMENTE analisa dados que são FORNECIDOS. NÃO invente dados de redes sociais.
+2. Este sistema V1 monitora APENAS: Mídia Tradicional (Google News) + YouTube.
+3. NÃO mencione Twitter, Instagram, TikTok, Facebook ou Telegram - não temos acesso a essas redes.
+4. Se não há dados de uma fonte, NÃO inclua ela na análise.
+
+⚠️ REGRAS DE IMPARCIALIDADE:
 1. Você NÃO tem opinião política. Analisa FATOS e TOM da cobertura.
 2. Avalie o IMPACTO NA IMAGEM do político, não se a pauta é "boa" ou "ruim" ideologicamente.
 3. Crítica ao político = NEGATIVO, independente de quem critica.
@@ -114,8 +120,8 @@ CRITÉRIOS DE SCORE (0-10):
 - 2.5 = Cobertura desfavorável (críticas, problemas)
 - 0 = Cobertura muito desfavorável (escândalo, denúncia grave)
 
-FÓRMULA DO SCORE GERAL PONDERADO:
-(Mídia × 0.30) + (Twitter × 0.20) + (Instagram × 0.15) + (YouTube × 0.15) + (TikTok × 0.15) + (Telegram × 0.05)
+FÓRMULA DO SCORE GERAL (V1 - apenas Mídia + YouTube):
+(Mídia × 0.60) + (YouTube × 0.40)
 
 CRITÉRIOS DE ALERTA DE CRISE:
 - VERDE: Nenhum conteúdo com score 0 ou 2.5, score geral >= 5
@@ -123,24 +129,23 @@ CRITÉRIOS DE ALERTA DE CRISE:
 - VERMELHO: Conteúdo viral negativo OU score < 3.5
 
 TASKS:
-1. **SUMÁRIO EXECUTIVO (12-18 frases)** cobrindo:
-   - Visão geral: como foi o dia? (2-3 frases)
+1. **SUMÁRIO EXECUTIVO (8-12 frases)** cobrindo:
+   - Visão geral: como foi o dia? (2 frases)
    - Mídia tradicional: principais notícias e tom (2-3 frases)
-   - Redes sociais: o que viralizou, qual rede se destacou (3-4 frases)
-   - Pontos de atenção: críticas, polêmicas, riscos (2-3 frases)
-   - Oportunidades: pautas positivas, momentos para capitalizar (2-3 frases)
+   - YouTube: vídeos relevantes encontrados (2-3 frases)
+   - Pontos de atenção: críticas, polêmicas, riscos (2 frases)
    - Conclusão: recomendação principal (1-2 frases)
 
-2. **ANÁLISE POR REDE** - Para cada fonte:
+2. **ANÁLISE POR FONTE** - SOMENTE para fontes com dados:
    - Score de 0 a 10 (média do tom das publicações)
    - Resumo de 2-3 frases
-   - Top 3 destaques com métricas
+   - Top 3 destaques
 
 3. **RECOMENDAÇÕES**: 3 ações práticas para a assessoria de imprensa
 
 FORMATO DE RESPOSTA (JSON estrito):
 {
-  "summary": "string (sumário executivo de 12-18 frases em um único parágrafo)",
+  "summary": "string (sumário executivo de 8-12 frases em um único parágrafo)",
   "overallSentiment": "positivo|negativo|neutro|misto",
   "sentimentScore": number (0-10, usando a fórmula ponderada),
   "alertLevel": "verde|amarelo|vermelho",
@@ -219,11 +224,14 @@ export async function analyzeWithAI(data: DailyReportData): Promise<AIAnalysisRe
 // ============================================
 
 function formatDataForAI(data: DailyReportData): string {
+  // V1: Apenas Mídia Tradicional (Google News) + YouTube
+  // NÃO incluir Twitter, Instagram, TikTok - não temos acesso a essas redes
+
   // Agrupa menções por fonte
   const midiaMencoes = data.mentions.filter(m => m.platform === 'midia' || m.platform === 'news')
   const youtubeMencoes = data.mentions.filter(m => m.platform === 'youtube')
 
-  // Calcula estatísticas por rede
+  // Calcula estatísticas apenas para YouTube (única rede disponível)
   const calcStats = (network: NetworkData | undefined) => ({
     quantidade: network?.mentions || 0,
     engajamento_total: network?.topPosts?.reduce((sum, p) => sum + (p.engagement || 0), 0) || 0,
@@ -232,17 +240,11 @@ function formatDataForAI(data: DailyReportData): string {
     neutras: network?.neutral || 0
   })
 
-  const twitterData = data.networks.find(n => n.network.toLowerCase().includes('twitter'))
-  const instagramData = data.networks.find(n => n.network.toLowerCase().includes('instagram'))
   const youtubeData = data.networks.find(n => n.network.toLowerCase().includes('youtube'))
-  const tiktokData = data.networks.find(n => n.network.toLowerCase().includes('tiktok'))
 
   const stats = {
     midia: { quantidade: midiaMencoes.length, engajamento_total: 0 },
-    twitter: calcStats(twitterData),
-    instagram: calcStats(instagramData),
-    youtube: calcStats(youtubeData),
-    tiktok: calcStats(tiktokData)
+    youtube: calcStats(youtubeData)
   }
 
   let message = `Analise a cobertura do político ${data.politicianName}`
@@ -251,12 +253,16 @@ function formatDataForAI(data: DailyReportData): string {
   message += ` nas últimas 24 horas.\n\n`
 
   message += `📅 Data: ${data.date}\n\n`
+
+  message += `⚠️ IMPORTANTE: Este sistema V1 monitora APENAS Mídia Tradicional + YouTube.\n`
+  message += `NÃO mencione Twitter, Instagram, TikTok ou outras redes - não temos dados dessas fontes.\n\n`
+
   message += `═══════════════════════════════════════\n`
-  message += `DADOS POR FONTE:\n`
+  message += `DADOS DISPONÍVEIS (V1):\n`
   message += `═══════════════════════════════════════\n\n`
 
-  // Mídia Tradicional
-  message += `📰 MÍDIA TRADICIONAL (${stats.midia.quantidade} itens):\n`
+  // Mídia Tradicional (Google News)
+  message += `📰 MÍDIA TRADICIONAL - Google News (${stats.midia.quantidade} itens):\n`
   if (midiaMencoes.length > 0) {
     message += JSON.stringify(midiaMencoes.slice(0, 15).map(m => ({
       titulo: m.title,
@@ -265,33 +271,7 @@ function formatDataForAI(data: DailyReportData): string {
       data: m.publishedAt
     })), null, 2) + '\n\n'
   } else {
-    message += 'Nenhuma menção encontrada\n\n'
-  }
-
-  // Twitter/X
-  message += `🐦 X/TWITTER (${stats.twitter.quantidade} itens, ${stats.twitter.engajamento_total} engajamento):\n`
-  if (twitterData?.topPosts?.length) {
-    message += JSON.stringify(twitterData.topPosts.slice(0, 10).map(p => ({
-      texto: p.content?.substring(0, 200),
-      autor: p.author,
-      engajamento: p.engagement,
-      url: p.url
-    })), null, 2) + '\n\n'
-  } else {
-    message += 'Nenhuma menção encontrada\n\n'
-  }
-
-  // Instagram
-  message += `📸 INSTAGRAM (${stats.instagram.quantidade} itens, ${stats.instagram.engajamento_total} engajamento):\n`
-  if (instagramData?.topPosts?.length) {
-    message += JSON.stringify(instagramData.topPosts.slice(0, 10).map(p => ({
-      texto: p.content?.substring(0, 150),
-      autor: p.author,
-      engajamento: p.engagement,
-      url: p.url
-    })), null, 2) + '\n\n'
-  } else {
-    message += 'Nenhuma menção encontrada\n\n'
+    message += 'Nenhuma menção encontrada na mídia tradicional\n\n'
   }
 
   // YouTube
@@ -310,32 +290,17 @@ function formatDataForAI(data: DailyReportData): string {
       url: m.url
     })), null, 2) + '\n\n'
   } else {
-    message += 'Nenhuma menção encontrada\n\n'
-  }
-
-  // TikTok
-  message += `📱 TIKTOK (${stats.tiktok.quantidade} itens, ${stats.tiktok.engajamento_total} engajamento):\n`
-  if (tiktokData?.topPosts?.length) {
-    message += JSON.stringify(tiktokData.topPosts.slice(0, 10).map(p => ({
-      texto: p.content?.substring(0, 150),
-      autor: p.author,
-      engajamento: p.engagement,
-      url: p.url
-    })), null, 2) + '\n\n'
-  } else {
-    message += 'Nenhuma menção encontrada\n\n'
+    message += 'Nenhum vídeo encontrado no YouTube\n\n'
   }
 
   message += `═══════════════════════════════════════\n`
-  message += `ESTATÍSTICAS RESUMIDAS:\n`
+  message += `RESUMO DOS DADOS DISPONÍVEIS:\n`
   message += `═══════════════════════════════════════\n`
-  message += `- Mídia: ${stats.midia.quantidade} itens\n`
-  message += `- Twitter: ${stats.twitter.quantidade} itens (${stats.twitter.engajamento_total} engajamento)\n`
-  message += `- Instagram: ${stats.instagram.quantidade} itens (${stats.instagram.engajamento_total} engajamento)\n`
-  message += `- YouTube: ${stats.youtube.quantidade} itens (${stats.youtube.engajamento_total} engajamento)\n`
-  message += `- TikTok: ${stats.tiktok.quantidade} itens (${stats.tiktok.engajamento_total} engajamento)\n\n`
+  message += `- Mídia Tradicional: ${stats.midia.quantidade} notícias\n`
+  message += `- YouTube: ${stats.youtube.quantidade} vídeos (${stats.youtube.engajamento_total} engajamento total)\n\n`
 
-  message += `Gere o relatório completo no formato JSON especificado, seguindo TODAS as regras de imparcialidade.`
+  message += `Gere o relatório completo no formato JSON especificado.\n`
+  message += `LEMBRE-SE: Analise APENAS os dados fornecidos acima. NÃO invente dados de outras redes sociais.`
 
   return message
 }

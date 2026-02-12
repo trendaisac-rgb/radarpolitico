@@ -248,21 +248,25 @@ export function generateInsights(
     recomendacoes.push('Fortaleça a comunicação com a base de apoiadores')
   }
 
-  // Análise por rede
+  // Análise por rede (V1: apenas Mídia + YouTube)
   const youtubeData = networks['youtube']
-  if (youtubeData && youtubeData.mencoes > 5) {
-    recomendacoes.push('YouTube está ativo - considere gravar conteúdo próprio para engajar')
+  if (youtubeData && youtubeData.mencoes > 3) {
+    if (youtubeData.sentimento_positivo > youtubeData.sentimento_negativo) {
+      recomendacoes.push('YouTube tem cobertura positiva - aproveite para amplificar o conteúdo')
+    } else if (youtubeData.sentimento_negativo > youtubeData.sentimento_positivo) {
+      recomendacoes.push('Vídeos críticos detectados no YouTube - avalie necessidade de resposta')
+    }
   }
 
-  const twitterData = networks['twitter']
-  if (twitterData && twitterData.sentimento_negativo > twitterData.sentimento_positivo) {
-    recomendacoes.push('Twitter/X tem viés negativo - monitore e responda estrategicamente')
+  const midiaData = networks['midia']
+  if (midiaData && midiaData.mencoes > 5) {
+    recomendacoes.push('Mídia ativa hoje - acompanhe a evolução das notícias')
   }
 
   // Recomendação padrão se não houver outras
   if (recomendacoes.length === 0) {
     recomendacoes.push('Continue monitorando diariamente para identificar tendências')
-    recomendacoes.push('Mantenha presença ativa nas redes sociais')
+    recomendacoes.push('Atualize os dados regularmente para ter insights precisos')
   }
 
   return { sumario, recomendacoes }

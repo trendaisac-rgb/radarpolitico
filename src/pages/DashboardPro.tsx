@@ -33,6 +33,7 @@ import { useMonitoring } from '@/hooks/useMonitoring'
 import { searchAllNetworks, type SocialSearchResult } from '@/services/socialMedia'
 import { analyzeWithAI, type AIAnalysisResult, isAIConfigured } from '@/services/aiAnalysis'
 import { printReport, shareViaWhatsApp, type ReportData } from '@/services/reportExport'
+import { calculateScore, getAlertLevel, type ScoreResult } from '@/services/scoreCalculator'
 import { DailyReport } from '@/components/dashboard/DailyReport'
 
 // Dialog
@@ -44,15 +45,10 @@ import {
   DialogTrigger
 } from '@/components/ui/dialog'
 
-// Ícones das redes
+// Ícones das redes (V1: apenas Mídia + YouTube)
 const networkIcons: Record<string, string> = {
   midia: '📰',
-  youtube: '▶️',
-  twitter: '🐦',
-  instagram: '📸',
-  tiktok: '🎵',
-  telegram: '✈️',
-  facebook: '👤'
+  youtube: '▶️'
 }
 
 // Converte menções do banco em formato de posts
@@ -133,7 +129,7 @@ function generateScoreHistory(mentions: Mention[], days: number = 7) {
   return history
 }
 
-// Gera insights baseado nos dados
+// Gera insights baseado nos dados (V1: apenas Mídia + YouTube)
 function generateAIInsights(
   mentions: Mention[],
   socialResults: Record<string, SocialSearchResult>,
@@ -143,21 +139,19 @@ function generateAIInsights(
   const positive = mentions.filter(m => m.sentiment === 'positivo').length
   const negative = mentions.filter(m => m.sentiment === 'negativo').length
 
-  // Conta menções por rede
+  // V1: Conta apenas menções de mídia e YouTube
   const ytCount = socialResults.youtube?.totalResults || 0
-  const twCount = socialResults.twitter?.totalResults || 0
-  const igCount = socialResults.instagram?.totalResults || 0
-  const tkCount = socialResults.tiktok?.totalResults || 0
+  const newsCount = mentions.filter(m => !m.source_name?.toLowerCase().includes('youtube')).length
 
   let summary = ''
   const recommendations: string[] = []
 
   if (score >= 70) {
-    summary = `Excelente! Sua imagem está muito positiva com score ${score}. ${total} menções foram analisadas, sendo ${positive} positivas.`
+    summary = `Excelente! Sua imagem está muito positiva com score ${score}. ${total} menções foram analisadas na mídia e YouTube, sendo ${positive} positivas.`
     recommendations.push('Continue monitorando para manter esse padrão positivo')
     recommendations.push('Aproveite o momento favorável para amplificar conquistas')
   } else if (score >= 50) {
-    summary = `Situação estável com score ${score}. Das ${total} menções, ${positive} foram positivas e ${negative} negativas.`
+    summary = `Situação estável com score ${score}. Das ${total} menções na mídia, ${positive} foram positivas e ${negative} negativas.`
     recommendations.push('Foque em aumentar menções positivas com ações proativas')
     recommendations.push('Monitore de perto os temas que geram sentimento negativo')
   } else if (score >= 30) {
@@ -165,17 +159,17 @@ function generateAIInsights(
     recommendations.push('Identifique os principais temas negativos e elabore respostas')
     recommendations.push('Considere ações de comunicação para reverter o cenário')
   } else {
-    summary = `Alerta crítico! Score ${score} indica crise de imagem. ${negative} menções negativas detectadas.`
+    summary = `Alerta crítico! Score ${score} indica crise de imagem. ${negative} menções negativas detectadas na mídia.`
     recommendations.push('Ação imediata necessária: avalie os principais focos de crise')
     recommendations.push('Considere pronunciamento oficial sobre os temas mais sensíveis')
   }
 
-  // Adiciona insights sobre redes sociais
-  if (ytCount > 5) {
-    recommendations.push(`YouTube ativo: ${ytCount} vídeos mencionando você`)
+  // Adiciona insights sobre fontes disponíveis (V1)
+  if (ytCount > 0) {
+    recommendations.push(`YouTube: ${ytCount} vídeos encontrados - analise os mais relevantes`)
   }
-  if (twCount > 10) {
-    recommendations.push(`Alto volume no Twitter/X: ${twCount} publicações`)
+  if (newsCount > 0) {
+    recommendations.push(`Mídia: ${newsCount} notícias monitoradas hoje`)
   }
 
   return { summary, recommendations }
@@ -330,6 +324,7 @@ export default function DashboardPro() {
       })
 
       // Prepara dados para a IA no formato correto
+      // V1: Apenas Mídia (Google News) + YouTube - NÃO incluir Twitter/Instagram/TikTok
       const reportData = {
         politicianName: currentPolitician.name,
         party: currentPolitician.party,
@@ -344,10 +339,7 @@ export default function DashboardPro() {
           publishedAt: m.published_at || m.created_at
         })),
         networks: [
-          createNetworkData('YouTube', socialResults.youtube),
-          createNetworkData('Twitter/X', socialResults.twitter),
-          createNetworkData('Instagram', socialResults.instagram),
-          createNetworkData('TikTok', socialResults.tiktok)
+          createNetworkData('YouTube', socialResults.youtube)
         ].filter(n => n.mentions > 0 || n.topPosts.length > 0)
       }
 
@@ -403,22 +395,36 @@ export default function DashboardPro() {
     }
   }
 
-  // Cálculos
-  const score = stats?.total
-    ? Math.round(50 + ((stats.positive - stats.negative) / stats.total) * 50)
-    : 50
+  // Cálculos usando o novo sistema de score V2
+  const scoreResult: ScoreResult = calculateScore({
+    mentions: mentions.map(m => ({
+      sentiment: m.sentiment as 'positivo' | 'negativo' | 'neutro',
+      source: m.source_name,
+      publishedAt: m.published_at || m.created_at,
+      relevanceScore: m.relevance_score
+    })),
+    youtubeVideos: socialResults.youtube?.posts?.map(p => ({
+      sentiment: p.sentiment as 'positivo' | 'negativo' | 'neutro',
+      viewCount: p.views,
+      likeCount: p.likes
+    })) || []
+  })
 
-  const periodDays = {
-    '7D': 7, '15D': 15, '30D': 30, '90D': 90
+  const score = scoreResult.score
+
+  const periodDays: Record<number, number> = {
+    7: 7, 15: 15, 30: 30, 90: 90
   }
-  const scoreHistory = generateScoreHistory(mentions, periodDays[chartPeriod])
+  const scoreHistory = generateScoreHistory(mentions, periodDays[chartPeriod] || chartPeriod)
 
-  const alertLevel = score >= 70 ? 'verde' : score >= 40 ? 'amarelo' : 'vermelho'
-  const alertMessage = score >= 70
-    ? 'Imagem positiva - Continue monitorando'
-    : score >= 40
-      ? 'Atenção redobrada recomendada'
-      : 'Situação crítica - Ação necessária'
+  // Usa o novo sistema de alertas
+  const alertResult = getAlertLevel(
+    score,
+    scoreResult.breakdown.negativeMentions,
+    scoreResult.breakdown.totalMentions
+  )
+  const alertLevel = alertResult.level
+  const alertMessage = alertResult.reason
 
   // Usa insights da IA quando disponível, senão usa análise local
   const insights = aiAnalysis
@@ -432,7 +438,7 @@ export default function DashboardPro() {
       }
     : generateAIInsights(mentions, socialResults, score)
 
-  // Prepara dados das redes
+  // Prepara dados das redes (V1: apenas Mídia + YouTube)
   const networkData = {
     midia: {
       mencoes: mentions.filter(m => !m.source_name?.toLowerCase().includes('youtube')).length,
@@ -451,36 +457,6 @@ export default function DashboardPro() {
       engajamento: socialResults.youtube?.posts?.reduce((s, p) => s + (p.views || 0), 0) || 0,
       posts: socialResultToPosts(socialResults.youtube),
       source: socialResults.youtube?.source || 'YouTube API'
-    },
-    twitter: {
-      mencoes: socialResults.twitter?.totalResults || 0,
-      sentimento_positivo: socialResults.twitter?.posts?.filter(p => p.sentiment === 'positivo').length || 0,
-      sentimento_negativo: socialResults.twitter?.posts?.filter(p => p.sentiment === 'negativo').length || 0,
-      sentimento_neutro: socialResults.twitter?.posts?.filter(p => p.sentiment === 'neutro').length || 0,
-      score: 50,
-      engajamento: socialResults.twitter?.posts?.reduce((s, p) => s + (p.likes || 0) + (p.comments || 0), 0) || 0,
-      posts: socialResultToPosts(socialResults.twitter),
-      source: socialResults.twitter?.source
-    },
-    instagram: {
-      mencoes: socialResults.instagram?.totalResults || 0,
-      sentimento_positivo: socialResults.instagram?.posts?.filter(p => p.sentiment === 'positivo').length || 0,
-      sentimento_negativo: socialResults.instagram?.posts?.filter(p => p.sentiment === 'negativo').length || 0,
-      sentimento_neutro: socialResults.instagram?.posts?.filter(p => p.sentiment === 'neutro').length || 0,
-      score: 50,
-      engajamento: socialResults.instagram?.posts?.reduce((s, p) => s + (p.likes || 0) + (p.comments || 0), 0) || 0,
-      posts: socialResultToPosts(socialResults.instagram),
-      source: socialResults.instagram?.source
-    },
-    tiktok: {
-      mencoes: socialResults.tiktok?.totalResults || 0,
-      sentimento_positivo: socialResults.tiktok?.posts?.filter(p => p.sentiment === 'positivo').length || 0,
-      sentimento_negativo: socialResults.tiktok?.posts?.filter(p => p.sentiment === 'negativo').length || 0,
-      sentimento_neutro: socialResults.tiktok?.posts?.filter(p => p.sentiment === 'neutro').length || 0,
-      score: 50,
-      engajamento: socialResults.tiktok?.posts?.reduce((s, p) => s + (p.views || 0), 0) || 0,
-      posts: socialResultToPosts(socialResults.tiktok),
-      source: socialResults.tiktok?.source
     }
   }
 
@@ -677,11 +653,25 @@ export default function DashboardPro() {
           <div className="lg:col-span-1">
             <Card className="h-full">
               <CardContent className="p-6 flex flex-col items-center justify-center">
-                <h3 className="text-sm font-medium text-muted-foreground mb-2">Score Geral</h3>
+                <h3 className="text-sm font-medium text-muted-foreground mb-2">Score de Imagem</h3>
                 <ScoreGauge score={score} size={180} />
-                <p className="text-sm text-muted-foreground mt-2">
-                  Baseado em {stats?.total || 0} menções
-                </p>
+                <div className="text-center mt-2">
+                  <p className="text-sm text-muted-foreground">
+                    {scoreResult.breakdown.totalMentions} menções analisadas
+                  </p>
+                  <Badge
+                    variant="outline"
+                    className={`mt-1 text-xs ${
+                      scoreResult.confidence === 'alta'
+                        ? 'bg-green-50 text-green-700 border-green-200'
+                        : scoreResult.confidence === 'media'
+                          ? 'bg-yellow-50 text-yellow-700 border-yellow-200'
+                          : 'bg-gray-50 text-gray-600 border-gray-200'
+                    }`}
+                  >
+                    Confiança {scoreResult.confidence}
+                  </Badge>
+                </div>
               </CardContent>
             </Card>
           </div>
@@ -716,8 +706,8 @@ export default function DashboardPro() {
           </h2>
 
           {loadingSocial ? (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {[1, 2, 3, 4, 5].map(i => (
+            <div className="grid md:grid-cols-2 gap-6">
+              {[1, 2].map(i => (
                 <Card key={i}>
                   <CardContent className="p-4">
                     <Skeleton className="h-6 w-32 mb-3" />
@@ -728,12 +718,9 @@ export default function DashboardPro() {
               ))}
             </div>
           ) : (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid md:grid-cols-2 gap-6">
               <NetworkCard rede="midia" data={networkData.midia} icon={networkIcons.midia} />
               <NetworkCard rede="youtube" data={networkData.youtube} icon={networkIcons.youtube} />
-              <NetworkCard rede="twitter" data={networkData.twitter} icon={networkIcons.twitter} />
-              <NetworkCard rede="instagram" data={networkData.instagram} icon={networkIcons.instagram} />
-              <NetworkCard rede="tiktok" data={networkData.tiktok} icon={networkIcons.tiktok} />
             </div>
           )}
         </div>

@@ -24,24 +24,32 @@ export interface YouTubeSearchResult {
 }
 
 /**
- * Busca vídeos no YouTube para um termo específico
+ * Busca vídeos VIRAIS no YouTube para um termo específico
+ * Ordenados por VIEWS (viewCount) nas últimas 24h
  * Com timeout e fallback para dados de demonstração
  */
 export async function searchYouTubeVideos(
   query: string,
-  maxResults = 10
+  maxResults = 10,
+  orderBy: 'viewCount' | 'date' | 'relevance' = 'viewCount'
 ): Promise<YouTubeVideo[]> {
   try {
-    console.log(`🎬 Buscando YouTube: "${query}"...`)
+    console.log(`🎬 Buscando YouTube: "${query}" (ordenado por ${orderBy})...`)
+
+    // Calcula data de 24h atrás para filtrar vídeos recentes
+    const yesterday = new Date()
+    yesterday.setDate(yesterday.getDate() - 1)
+    const publishedAfter = yesterday.toISOString()
 
     const params = new URLSearchParams({
       part: 'snippet',
       q: query,
       type: 'video',
       maxResults: String(maxResults),
-      order: 'date',
+      order: orderBy, // 'viewCount' para vídeos virais
       relevanceLanguage: 'pt',
       regionCode: 'BR',
+      publishedAfter: publishedAfter, // Apenas últimas 24h
       key: YOUTUBE_API_KEY
     })
 
@@ -146,7 +154,8 @@ async function getVideoStatistics(videos: YouTubeVideo[]): Promise<YouTubeVideo[
 }
 
 /**
- * Busca vídeos sobre um político específico
+ * Busca vídeos VIRAIS sobre um político específico
+ * Ordenados por views (mais visualizados primeiro)
  */
 export async function searchPoliticianYouTube(
   name: string,
@@ -168,18 +177,18 @@ export async function searchPoliticianYouTube(
     queries.push(`${name} ${party}`)
   }
 
-  // Executa buscas em paralelo
+  // Executa buscas em paralelo (ordenadas por viewCount = virais)
   const results = await Promise.all(
-    queries.map(q => searchYouTubeVideos(q, 5))
+    queries.map(q => searchYouTubeVideos(q, 5, 'viewCount'))
   )
 
   // Combina e remove duplicatas
   const allVideos = results.flat()
   const uniqueVideos = removeDuplicateVideos(allVideos)
 
-  // Ordena por data (mais recente primeiro)
+  // Ordena por VIEWS (mais visualizados primeiro) - vídeos virais no topo
   return uniqueVideos.sort((a, b) =>
-    new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
+    (b.viewCount || 0) - (a.viewCount || 0)
   )
 }
 
@@ -267,6 +276,7 @@ export function formatViewCount(count?: number): string {
 
 /**
  * Gera dados de demonstração quando API falha
+ * Simula vídeos virais ordenados por views
  */
 function generateDemoYouTubeData(query: string): YouTubeVideo[] {
   const now = new Date()
@@ -281,12 +291,15 @@ function generateDemoYouTubeData(query: string): YouTubeVideo[] {
   ]
 
   const templates = [
-    `${query}: Entrevista exclusiva sobre os rumos do governo`,
+    `🔴 AO VIVO: ${query} - Última hora`,
     `URGENTE: ${query} se pronuncia sobre polêmica`,
+    `${query}: Entrevista exclusiva sobre os rumos do governo`,
     `Análise: O que esperar de ${query} nos próximos meses`,
-    `${query} participa de debate e defende suas propostas`,
-    `Repercussão: Declarações de ${query} movimentam redes sociais`
+    `Repercussão: Declarações de ${query} movimentam redes`
   ]
+
+  // Gera views decrescentes para simular ordenação por viralização
+  const baseViews = [500000, 250000, 120000, 80000, 45000]
 
   return templates.map((title, i) => ({
     id: `demo_yt_${Date.now()}_${i}`,
@@ -296,8 +309,8 @@ function generateDemoYouTubeData(query: string): YouTubeVideo[] {
     publishedAt: new Date(now.getTime() - i * 3600000).toISOString(),
     thumbnailUrl: `https://i.ytimg.com/vi/dQw4w9WgXcQ/mqdefault.jpg`,
     url: `https://www.youtube.com/watch?v=demo${i}`,
-    viewCount: Math.floor(Math.random() * 100000) + 10000,
-    likeCount: Math.floor(Math.random() * 5000) + 500,
-    commentCount: Math.floor(Math.random() * 1000) + 100
-  }))
+    viewCount: baseViews[i] + Math.floor(Math.random() * 10000),
+    likeCount: Math.floor(baseViews[i] * 0.02) + Math.floor(Math.random() * 500),
+    commentCount: Math.floor(baseViews[i] * 0.005) + Math.floor(Math.random() * 100)
+  })).sort((a, b) => (b.viewCount || 0) - (a.viewCount || 0))
 }
