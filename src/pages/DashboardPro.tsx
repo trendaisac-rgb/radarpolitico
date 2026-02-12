@@ -863,6 +863,112 @@ export default function Dashboard() {
           )}
         </div>
 
+        {/* NOTÍCIAS E VÍDEOS - Lista dos dados reais */}
+        <div className="grid md:grid-cols-2 gap-6 mt-6">
+          {/* Lista de Notícias */}
+          <div>
+            <h2 className="text-sm font-semibold mb-4 flex items-center gap-2" style={{ color: `${t.brightText}dd` }}>
+              📰 Notícias Encontradas ({mentions.filter(m => !m.source_name?.toLowerCase().includes('youtube')).length})
+            </h2>
+            <Card style={{ backgroundColor: t.cardBg, borderColor: t.cardBorder }}>
+              <CardContent className="p-4 max-h-96 overflow-y-auto">
+                {mentions.filter(m => !m.source_name?.toLowerCase().includes('youtube')).length > 0 ? (
+                  <ul className="space-y-3">
+                    {mentions
+                      .filter(m => !m.source_name?.toLowerCase().includes('youtube'))
+                      .slice(0, 15)
+                      .map((m, i) => (
+                        <li key={i} className="border-b pb-2" style={{ borderColor: t.cardBorder }}>
+                          <a
+                            href={m.url || '#'}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="block hover:opacity-80 transition-opacity"
+                          >
+                            <p className="text-sm font-medium leading-tight mb-1" style={{ color: t.brightText }}>
+                              {m.title || m.content?.substring(0, 100)}
+                            </p>
+                            <div className="flex items-center gap-2 text-xs" style={{ color: t.mutedText }}>
+                              <span className="font-medium" style={{ color: t.accentText }}>{m.source_name || 'Fonte'}</span>
+                              <span>•</span>
+                              <span>{m.published_at ? new Date(m.published_at).toLocaleDateString('pt-BR') : ''}</span>
+                              {m.sentiment && (
+                                <>
+                                  <span>•</span>
+                                  <Badge className={`text-[10px] ${
+                                    m.sentiment === 'positivo' ? 'bg-green-900/50 text-green-300' :
+                                    m.sentiment === 'negativo' ? 'bg-red-900/50 text-red-300' :
+                                    'bg-gray-700/50 text-gray-300'
+                                  }`}>
+                                    {m.sentiment}
+                                  </Badge>
+                                </>
+                              )}
+                            </div>
+                          </a>
+                        </li>
+                      ))}
+                  </ul>
+                ) : (
+                  <p className="text-sm text-center py-8" style={{ color: t.mutedText }}>
+                    Nenhuma notícia encontrada. Clique em "Atualizar" para buscar.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Lista de Vídeos do YouTube */}
+          <div>
+            <h2 className="text-sm font-semibold mb-4 flex items-center gap-2" style={{ color: `${t.brightText}dd` }}>
+              ▶️ Vídeos do YouTube ({socialResults.youtube?.posts?.length || 0})
+            </h2>
+            <Card style={{ backgroundColor: t.cardBg, borderColor: t.cardBorder }}>
+              <CardContent className="p-4 max-h-96 overflow-y-auto">
+                {socialResults.youtube?.posts && socialResults.youtube.posts.length > 0 ? (
+                  <ul className="space-y-3">
+                    {socialResults.youtube.posts.slice(0, 15).map((video, i) => (
+                      <li key={i} className="border-b pb-2" style={{ borderColor: t.cardBorder }}>
+                        <a
+                          href={video.url || '#'}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block hover:opacity-80 transition-opacity"
+                        >
+                          <p className="text-sm font-medium leading-tight mb-1" style={{ color: t.brightText }}>
+                            {video.content}
+                          </p>
+                          <div className="flex items-center gap-2 text-xs" style={{ color: t.mutedText }}>
+                            <span className="font-medium" style={{ color: t.accentText }}>{video.author}</span>
+                            <span>•</span>
+                            <span>{video.engagement?.toLocaleString() || 0} views</span>
+                            {video.sentiment && (
+                              <>
+                                <span>•</span>
+                                <Badge className={`text-[10px] ${
+                                  video.sentiment === 'positivo' ? 'bg-green-900/50 text-green-300' :
+                                  video.sentiment === 'negativo' ? 'bg-red-900/50 text-red-300' :
+                                  'bg-gray-700/50 text-gray-300'
+                                }`}>
+                                  {video.sentiment}
+                                </Badge>
+                              </>
+                            )}
+                          </div>
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-sm text-center py-8" style={{ color: t.mutedText }}>
+                    Nenhum vídeo encontrado. Clique em "Atualizar" para buscar.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
         {/* Footer */}
         <footer className="text-center py-6 text-xs" style={{ color: `${t.mutedText}88` }}>
           Monitor Político 360° • Dados do Supabase • Atualizado diariamente
