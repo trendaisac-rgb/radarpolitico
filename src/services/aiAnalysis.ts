@@ -1,6 +1,9 @@
 /**
  * RadarPolítico - Serviço de Análise com IA
- * Chama edge function segura (chave nunca exposta no frontend)
+ * ANALISTA POLÍTICO SÊNIOR - 20+ anos de experiência na política brasileira
+ *
+ * Este módulo implementa uma IA que age como um consultor político experiente,
+ * lendo e analisando o CONTEÚDO real dos artigos, não apenas contando menções.
  */
 
 import { supabase } from '@/integrations/supabase/client'
@@ -35,7 +38,7 @@ export interface NetworkData {
 export interface AIAnalysisResult {
   summary: string
   overallSentiment: 'positivo' | 'negativo' | 'neutro' | 'misto'
-  sentimentScore: number
+  sentimentScore: number // 0-100 (determinado pela IA)
   alertLevel: 'verde' | 'amarelo' | 'vermelho'
   alertReason: string
   topNews: Array<{
@@ -59,6 +62,10 @@ export interface AIAnalysisResult {
     action: string
   }>
   opportunities: string[]
+  // Novos campos para análise profunda
+  narrativaDominante: string
+  temasCriticos: string[]
+  tonDaCobertura: string
 }
 
 export interface DailyReportData {
@@ -71,69 +78,143 @@ export interface DailyReportData {
 }
 
 // ============================================
-// PROMPT - ANALISTA POLÍTICO DE ALTO PADRÃO
+// PERSONA: ANALISTA POLÍTICO SÊNIOR
 // ============================================
 
-const ANALYSIS_PROMPT = `Você é um ANALISTA POLÍTICO SÊNIOR de alto padrão, com experiência em comunicação política, gestão de crises e inteligência de mídia. Sua função é produzir relatórios executivos profundos e acionáveis.
+const ANALYST_PERSONA = `Você é CARLOS MENDES, um Analista Político Sênior com 25 anos de experiência na política brasileira.
 
-## PRINCÍPIOS FUNDAMENTAIS
+## SUA TRAJETÓRIA
+- Ex-assessor de comunicação de 3 governadores e 2 ministros
+- Consultor de campanhas eleitorais desde 1998
+- Especialista em gestão de crises e monitoramento de mídia
+- Colunista político em grandes veículos por 15 anos
+- Conhece profundamente o cenário político brasileiro de Brasília ao interior
 
-1. **IMPARCIALIDADE ABSOLUTA**: Você NÃO tem viés partidário. Trate TODOS os políticos — esquerda, direita, centro — com os MESMOS critérios técnicos. Sua análise é baseada exclusivamente em DADOS e PERCEPÇÃO PÚBLICA, nunca em ideologia.
+## SEU ESTILO DE ANÁLISE
+Você NÃO é um robô que conta menções. Você é um ANALISTA que:
+1. LÊ cada notícia e entende o CONTEXTO político
+2. Identifica NARRATIVAS e tendências na cobertura
+3. Avalia o IMPACTO REAL na imagem do político
+4. Dá recomendações PRÁTICAS como faria para um cliente
 
-2. **SENTIMENTO POPULAR**: Classifique o sentimento (positivo, negativo, neutro) baseado em como a POPULAÇÃO e a MÍDIA percebem os fatos — não se os fatos são objetivamente bons ou ruins. Uma CPI pode ser vista como "justiça" por uns e "perseguição" por outros: analise o TOM PREDOMINANTE da cobertura.
+## PRINCÍPIOS INEGOCIÁVEIS
 
-3. **ANÁLISE BASEADA EM DADOS**: Use SOMENTE os dados fornecidos. NÃO invente dados, números ou menções que não existam. Se não há dados suficientes, diga isso claramente.
+### APARTIDÁRIO ABSOLUTO
+- Você NÃO tem preferência partidária. PSOL, PT, PL, MDB, PP, UNIÃO - todos são analisados com os MESMOS critérios.
+- Você analisa PERCEPÇÃO PÚBLICA e TOM DA MÍDIA, não mérito ideológico.
+- Uma CPI contra político de direita é analisada com os mesmos critérios de uma CPI contra político de esquerda.
+- Crítica de oposição é tratada igual a crítica de aliados.
 
-4. **LIMITAÇÃO V1**: Este sistema monitora APENAS Mídia Tradicional (Google News) e YouTube. NÃO mencione Twitter, Instagram, TikTok, Facebook ou Telegram.
+### ANÁLISE DE IMPACTO, NÃO DE MÉRITO
+- Você avalia se a cobertura FORTALECE ou ENFRAQUECE a imagem pública.
+- NÃO julga se a política do político é "boa" ou "ruim".
+- Exemplo: "Ministro aumenta impostos" - você analisa como a MÍDIA cobriu (positiva, negativa, neutra) e o IMPACTO na percepção, não se aumentar imposto é certo ou errado.
 
-## ESTRUTURA DO RELATÓRIO EXECUTIVO
+### BASEADO EM EVIDÊNCIAS
+- CITE os artigos específicos que embasam sua análise.
+- NÃO invente dados. Se não há evidência, diga "dados insuficientes".
+- Se só há 2-3 menções, reconheça que a amostra é limitada.`
 
-O "summary" deve ser um RELATÓRIO EXECUTIVO completo (12-20 frases), estruturado assim:
+// ============================================
+// PROMPT PRINCIPAL
+// ============================================
 
-1. **Panorama Geral**: Contextualize a posição atual do político na mídia — volume de exposição, tom predominante, momento político.
-2. **Análise de Cobertura**: Detalhe os temas mais abordados, as fontes de maior impacto e o enquadramento das notícias (favorável, crítico, factual).
-3. **Dinâmica de Sentimento**: Explique a proporção entre menções positivas, negativas e neutras. Identifique se há TENDÊNCIA (melhora, piora, estabilidade).
-4. **Impacto na Imagem Pública**: Avalie como a cobertura atual afeta a PERCEPÇÃO POPULAR do político — capital político, credibilidade, vulnerabilidades expostas.
-5. **Cenário de Curto Prazo**: Projete os próximos dias — riscos iminentes, janelas de oportunidade, temas que podem escalar.
+const ANALYSIS_PROMPT = `${ANALYST_PERSONA}
 
-## CRITÉRIOS DE CLASSIFICAÇÃO DE SENTIMENTO
+## SUA TAREFA
 
-Classifique cada menção pelo TOM DA COBERTURA, não pelo conteúdo objetivo:
-- **Positivo**: Cobertura que fortalece a imagem, destaca realizações, conquistas, apoio popular, elogios
-- **Negativo**: Cobertura que enfraquece a imagem, destaca falhas, críticas, investigações, rejeição popular
-- **Neutro**: Cobertura factual sem tom claro, ou cobertura que não impacta significativamente a imagem
+Analise a cobertura de mídia do político fornecido e produza um RELATÓRIO EXECUTIVO como você faria para um cliente real.
 
-## CRITÉRIOS DE SCORE (0-10):
-- 9-10 = Cobertura amplamente favorável, capital político em alta
-- 7-8 = Cobertura predominantemente positiva, boa fase
-- 5-6 = Cobertura equilibrada, momento estável
-- 3-4 = Cobertura predominantemente crítica, desgaste
-- 1-2 = Cobertura intensamente negativa, crise
-- 0 = Crise severa de imagem
+### O QUE VOCÊ DEVE FAZER:
 
-## RECOMENDAÇÕES
+1. **LER CADA NOTÍCIA** - Analise o título e conteúdo para entender O QUE está sendo dito sobre o político.
 
-Forneça recomendações ESTRATÉGICAS e ACIONÁVEIS, como um consultor político faria:
-- Ações de comunicação específicas
-- Posicionamentos recomendados
-- Riscos a mitigar com urgência
-- Oportunidades de pauta a explorar
-- Ajustes de narrativa
+2. **IDENTIFICAR A NARRATIVA DOMINANTE** - Qual é a "história" que a mídia está contando sobre esse político hoje? Exemplos:
+   - "Ministro enfrenta resistência no Congresso"
+   - "Governador inaugura obras e colhe apoio popular"
+   - "Deputado envolvido em polêmica sobre declarações"
 
-## FORMATO DE RESPOSTA (JSON estrito):
+3. **CLASSIFICAR CADA MENÇÃO** (APARTIDÁRIO):
+   - **POSITIVO**: Cobertura que FORTALECE a imagem (elogios, conquistas, apoio, realizações)
+   - **NEGATIVO**: Cobertura que ENFRAQUECE a imagem (críticas, escândalos, falhas, rejeição)
+   - **NEUTRO**: Cobertura factual sem tom claro, ou baixo impacto na imagem
+
+4. **DAR O SCORE DE 0 A 100**:
+   - 90-100: Cobertura excepcional, político em momento de ouro
+   - 70-89: Cobertura muito favorável, capital político alto
+   - 50-69: Cobertura equilibrada ou levemente positiva
+   - 30-49: Cobertura com tendência negativa, desgaste perceptível
+   - 10-29: Cobertura majoritariamente crítica, crise em formação
+   - 0-9: Crise severa de imagem, cobertura devastadora
+
+5. **RESUMIR O QUE ESTÁ SENDO DITO** - Não diga "20 menções positivas". Diga "A mídia destacou a inauguração da nova escola, com tom favorável no G1 e Estadão. A oposição criticou o custo da obra, mas a cobertura geral foi positiva."
+
+## FORMATO DE RESPOSTA (JSON):
+
 {
-  "summary": "string (relatório executivo de 12-20 frases, profundo e analítico)",
+  "summary": "RELATÓRIO EXECUTIVO (15-25 frases): Comece com a NARRATIVA DOMINANTE do dia. O que a mídia está falando? Quais os temas principais? Como isso afeta a imagem? Cite veículos e notícias específicas. Finalize com avaliação do cenário.",
+
+  "narrativaDominante": "Uma frase que resume a 'história' da mídia sobre o político hoje",
+
+  "temasCriticos": ["Lista dos temas mais sensíveis que requerem atenção"],
+
+  "tonDaCobertura": "Descrição qualitativa do tom geral: 'Predominantemente crítico com foco em...', 'Favorável destacando...', 'Factual e neutro sobre...'",
+
   "overallSentiment": "positivo|negativo|neutro|misto",
-  "sentimentScore": number (0-10),
+
+  "sentimentScore": "NÚMERO DE 0 A 100 baseado na sua análise profissional",
+
   "alertLevel": "verde|amarelo|vermelho",
-  "alertReason": "string (explicação técnica do nível de alerta)",
-  "topNews": [{"title": "string", "source": "string", "sentiment": "positivo|negativo|neutro", "relevance": "string (análise do impacto)", "url": "string"}],
-  "mainTopics": ["string"],
-  "recommendations": ["string (recomendações estratégicas detalhadas)"],
-  "networkScores": [{"network": "string", "score": number (0-10), "trend": "subindo|descendo|estavel", "insight": "string"}],
-  "risks": [{"description": "string (risco detalhado)", "severity": "baixo|medio|alto", "action": "string (ação recomendada)"}],
-  "opportunities": ["string (oportunidades estratégicas)"]
-}`
+  "alertReason": "Explicação profissional do nível de alerta",
+
+  "topNews": [
+    {
+      "title": "Título da notícia",
+      "source": "Veículo",
+      "sentiment": "positivo|negativo|neutro",
+      "relevance": "Por que essa notícia importa? Qual o impacto na imagem?",
+      "url": "URL"
+    }
+  ],
+
+  "mainTopics": ["Temas principais da cobertura"],
+
+  "recommendations": [
+    "Recomendação estratégica 1 - específica e acionável",
+    "Recomendação estratégica 2 - como um consultor real faria"
+  ],
+
+  "networkScores": [
+    {
+      "network": "Mídia|YouTube",
+      "score": "0-100",
+      "trend": "subindo|descendo|estavel",
+      "insight": "Análise específica dessa fonte"
+    }
+  ],
+
+  "risks": [
+    {
+      "description": "Risco identificado com base na cobertura",
+      "severity": "baixo|medio|alto",
+      "action": "O que fazer para mitigar"
+    }
+  ],
+
+  "opportunities": ["Oportunidades identificadas na cobertura"]
+}
+
+## REGRAS CRÍTICAS:
+
+1. **NÃO COMECE DO 50** - O score deve refletir sua análise real. Se a cobertura é muito negativa, pode ser 15. Se é muito positiva, pode ser 85.
+
+2. **CITE AS FONTES** - No summary, mencione os veículos e notícias específicas.
+
+3. **SEJA ESPECÍFICO** - Em vez de "menções negativas sobre economia", diga "O Estadão criticou a proposta de aumento de gastos, enquanto a Folha questionou a viabilidade fiscal."
+
+4. **V1 LIMITAÇÃO** - Este sistema monitora apenas Mídia (Google News) e YouTube. NÃO mencione Twitter, Instagram, TikTok.
+
+5. **POUCOS DADOS** - Se há menos de 3 menções, reconheça que a análise é limitada e o score tem baixa confiança.`
 
 // ============================================
 // FUNÇÃO PRINCIPAL
@@ -148,8 +229,8 @@ export async function analyzeWithAI(data: DailyReportData): Promise<AIAnalysisRe
         systemPrompt: ANALYSIS_PROMPT,
         userMessage,
         model: 'gpt-4o-mini',
-        temperature: 0.4,
-        maxTokens: 3500
+        temperature: 0.5, // Um pouco mais criativo para análise
+        maxTokens: 4000
       }
     })
 
@@ -163,7 +244,14 @@ export async function analyzeWithAI(data: DailyReportData): Promise<AIAnalysisRe
       return analyzeLocally(data)
     }
 
-    return JSON.parse(response.content) as AIAnalysisResult
+    const result = JSON.parse(response.content) as AIAnalysisResult
+
+    // Garante que o score está em 0-100
+    if (result.sentimentScore !== undefined) {
+      result.sentimentScore = Math.max(0, Math.min(100, result.sentimentScore))
+    }
+
+    return result
   } catch (error) {
     console.error('Erro na análise com IA:', error)
     return analyzeLocally(data)
@@ -172,6 +260,7 @@ export async function analyzeWithAI(data: DailyReportData): Promise<AIAnalysisRe
 
 // ============================================
 // FORMATA DADOS PARA A IA
+// Envia o CONTEÚDO completo para análise real
 // ============================================
 
 function formatDataForAI(data: DailyReportData): string {
@@ -179,213 +268,257 @@ function formatDataForAI(data: DailyReportData): string {
   const youtubeMencoes = data.mentions.filter(m => m.platform === 'youtube')
   const youtubeData = data.networks.find(n => n.network.toLowerCase().includes('youtube'))
 
-  let message = `Analise a cobertura do político ${data.politicianName}`
-  if (data.party) message += ` (${data.party})`
-  if (data.position) message += ` - ${data.position}`
-  message += ` nas últimas 24 horas.\n\n`
-  message += `📅 Data: ${data.date}\n\n`
+  let message = `📊 ANÁLISE SOLICITADA\n\n`
+  message += `Político: ${data.politicianName}\n`
+  if (data.party) message += `Partido: ${data.party}\n`
+  if (data.position) message += `Cargo: ${data.position}\n`
+  message += `Data: ${data.date}\n\n`
 
-  message += `📰 MÍDIA TRADICIONAL (${midiaMencoes.length} itens):\n`
+  message += `${'='.repeat(60)}\n`
+  message += `📰 NOTÍCIAS DA MÍDIA TRADICIONAL (${midiaMencoes.length} artigos)\n`
+  message += `${'='.repeat(60)}\n\n`
+
   if (midiaMencoes.length > 0) {
-    message += JSON.stringify(midiaMencoes.slice(0, 15).map(m => ({
-      titulo: m.title, fonte: m.source, url: m.url
-    })), null, 2) + '\n\n'
+    midiaMencoes.slice(0, 20).forEach((m, i) => {
+      message += `--- NOTÍCIA ${i + 1} ---\n`
+      message += `Título: ${m.title}\n`
+      message += `Fonte: ${m.source}\n`
+      if (m.content && m.content.length > 50) {
+        message += `Conteúdo: ${m.content.substring(0, 500)}${m.content.length > 500 ? '...' : ''}\n`
+      }
+      message += `URL: ${m.url}\n`
+      message += `Publicado: ${m.publishedAt}\n\n`
+    })
   } else {
-    message += 'Nenhuma menção encontrada\n\n'
+    message += `Nenhuma notícia encontrada na mídia tradicional.\n\n`
   }
 
-  message += `🎬 YOUTUBE:\n`
+  message += `${'='.repeat(60)}\n`
+  message += `🎬 VÍDEOS DO YOUTUBE\n`
+  message += `${'='.repeat(60)}\n\n`
+
   if (youtubeData?.topPosts?.length) {
-    message += JSON.stringify(youtubeData.topPosts.slice(0, 10).map(p => ({
-      titulo: p.content, canal: p.author, engajamento: p.engagement, url: p.url
-    })), null, 2) + '\n\n'
+    youtubeData.topPosts.slice(0, 10).forEach((p, i) => {
+      message += `--- VÍDEO ${i + 1} ---\n`
+      message += `Título: ${p.content}\n`
+      message += `Canal: ${p.author}\n`
+      message += `Engajamento: ${p.engagement.toLocaleString()} interações\n`
+      message += `URL: ${p.url}\n\n`
+    })
   } else if (youtubeMencoes.length > 0) {
-    message += JSON.stringify(youtubeMencoes.slice(0, 10).map(m => ({
-      titulo: m.title, canal: m.source, url: m.url
-    })), null, 2) + '\n\n'
+    youtubeMencoes.slice(0, 10).forEach((m, i) => {
+      message += `--- VÍDEO ${i + 1} ---\n`
+      message += `Título: ${m.title}\n`
+      message += `Canal: ${m.source}\n`
+      message += `URL: ${m.url}\n\n`
+    })
   } else {
-    message += 'Nenhum vídeo encontrado\n\n'
+    message += `Nenhum vídeo encontrado no YouTube.\n\n`
   }
 
-  message += `Gere o relatório completo no formato JSON especificado.`
+  message += `${'='.repeat(60)}\n`
+  message += `📋 INSTRUÇÕES\n`
+  message += `${'='.repeat(60)}\n\n`
+  message += `Analise as notícias e vídeos acima como um Analista Político Sênior.\n`
+  message += `- Leia cada título e conteúdo\n`
+  message += `- Identifique a narrativa dominante\n`
+  message += `- Classifique o sentimento de cada menção (APARTIDÁRIO)\n`
+  message += `- Dê um score de 0-100 baseado na sua análise\n`
+  message += `- Responda no formato JSON especificado\n`
+
   return message
 }
 
 // ============================================
-// ANÁLISE LOCAL (FALLBACK)
+// ANÁLISE LOCAL (FALLBACK INTELIGENTE)
+// Quando não há IA disponível
 // ============================================
 
 function analyzeLocally(data: DailyReportData): AIAnalysisResult {
   const totalMentions = data.mentions.length
-  const positiveWords = ['aprova', 'conquista', 'sucesso', 'vitória', 'apoio', 'elogia', 'destaca', 'cresce', 'avança', 'lidera', 'popular', 'favorito', 'melhora', 'benefício', 'inaugura', 'entrega', 'investe', 'amplia', 'recorde', 'homenage']
-  const negativeWords = ['critica', 'acusa', 'investiga', 'denuncia', 'rejeita', 'crise', 'escândalo', 'corrupção', 'fraude', 'prisão', 'derrota', 'perde', 'queda', 'protesto', 'polêmica', 'irregularidade', 'suspeita', 'indicia', 'condena', 'impeachment']
+
+  // Palavras-chave expandidas para análise de sentimento
+  const positiveIndicators = [
+    'aprova', 'conquista', 'sucesso', 'vitória', 'apoio', 'elogia', 'destaca',
+    'cresce', 'avança', 'lidera', 'popular', 'favorito', 'melhora', 'benefício',
+    'inaugura', 'entrega', 'investe', 'amplia', 'recorde', 'homenage', 'celebra',
+    'reeleito', 'aprovado', 'sancionado', 'comemora', 'aplaude', 'fortalece'
+  ]
+
+  const negativeIndicators = [
+    'critica', 'acusa', 'investiga', 'denuncia', 'rejeita', 'crise', 'escândalo',
+    'corrupção', 'fraude', 'prisão', 'derrota', 'perde', 'queda', 'protesto',
+    'polêmica', 'irregularidade', 'suspeita', 'indicia', 'condena', 'impeachment',
+    'repudia', 'recua', 'fracassa', 'abandona', 'demite', 'renuncia', 'cassação'
+  ]
 
   let positiveCount = 0
   let negativeCount = 0
+  const analyzedMentions: Array<MentionData & { sentiment: 'positivo' | 'negativo' | 'neutro', analysis: string }> = []
 
-  const analyzedMentions = data.mentions.map(mention => {
+  data.mentions.forEach(mention => {
     const text = `${mention.title} ${mention.content || ''}`.toLowerCase()
     let sentiment: 'positivo' | 'negativo' | 'neutro' = 'neutro'
-    const posMatches = positiveWords.filter(w => text.includes(w)).length
-    const negMatches = negativeWords.filter(w => text.includes(w)).length
-    if (posMatches > negMatches) { sentiment = 'positivo'; positiveCount++ }
-    else if (negMatches > posMatches) { sentiment = 'negativo'; negativeCount++ }
-    return { ...mention, sentiment }
+    let analysis = ''
+
+    const posMatches = positiveIndicators.filter(w => text.includes(w))
+    const negMatches = negativeIndicators.filter(w => text.includes(w))
+
+    if (posMatches.length > negMatches.length) {
+      sentiment = 'positivo'
+      positiveCount++
+      analysis = `Tom favorável detectado (${posMatches.slice(0, 2).join(', ')})`
+    } else if (negMatches.length > posMatches.length) {
+      sentiment = 'negativo'
+      negativeCount++
+      analysis = `Tom crítico detectado (${negMatches.slice(0, 2).join(', ')})`
+    } else {
+      analysis = 'Cobertura factual sem tom definido'
+    }
+
+    analyzedMentions.push({ ...mention, sentiment, analysis })
   })
 
   const neutralCount = totalMentions - positiveCount - negativeCount
 
-  let sentimentScore = 5
+  // Score de 0-100 baseado na proporção (NÃO começa de 50!)
+  let sentimentScore = 50 // Default quando não há dados
   if (totalMentions > 0) {
-    const ratio = (positiveCount - negativeCount) / totalMentions
-    sentimentScore = Math.round(5 + ratio * 5)
-    sentimentScore = Math.max(0, Math.min(10, sentimentScore))
+    // Fórmula: % positivas * 100, ajustada por negativas
+    const positiveRatio = positiveCount / totalMentions
+    const negativeRatio = negativeCount / totalMentions
+    sentimentScore = Math.round((positiveRatio * 100) - (negativeRatio * 50) + (neutralCount / totalMentions * 25))
+    sentimentScore = Math.max(0, Math.min(100, sentimentScore))
   }
 
+  // Determina sentimento geral
   let overallSentiment: 'positivo' | 'negativo' | 'neutro' | 'misto' = 'neutro'
-  if (positiveCount > negativeCount * 1.5) overallSentiment = 'positivo'
-  else if (negativeCount > positiveCount * 1.5) overallSentiment = 'negativo'
+  if (positiveCount > negativeCount * 1.5 && positiveCount > 0) overallSentiment = 'positivo'
+  else if (negativeCount > positiveCount * 1.5 && negativeCount > 0) overallSentiment = 'negativo'
   else if (positiveCount > 0 && negativeCount > 0) overallSentiment = 'misto'
 
+  // Nível de alerta baseado no score
   let alertLevel: 'verde' | 'amarelo' | 'vermelho' = 'verde'
-  let alertReason = 'Cenário estável — nenhuma situação crítica detectada na cobertura atual'
-  if (negativeCount > totalMentions * 0.5 && negativeCount > 3) {
+  let alertReason = 'Cenário estável — nenhuma situação crítica identificada'
+
+  if (sentimentScore < 30) {
     alertLevel = 'vermelho'
-    alertReason = `Concentração crítica de menções negativas: ${negativeCount} de ${totalMentions} menções têm tom desfavorável, indicando possível crise de imagem`
-  } else if (negativeCount > totalMentions * 0.3 && negativeCount > 2) {
+    alertReason = `Score crítico de ${sentimentScore}/100 — cobertura predominantemente negativa requer atenção imediata`
+  } else if (sentimentScore < 50) {
     alertLevel = 'amarelo'
-    alertReason = `Tendência de aumento nas menções negativas — ${negativeCount} menções com tom crítico detectadas. Recomenda-se monitoramento intensificado`
+    alertReason = `Score de ${sentimentScore}/100 indica tendência de desgaste — monitoramento intensificado recomendado`
   }
 
-  const topNews = analyzedMentions.slice(0, 5).map(m => ({
-    title: m.title,
-    source: m.source,
-    sentiment: m.sentiment,
-    relevance: m.sentiment === 'negativo'
-      ? 'Cobertura com tom crítico — potencial impacto negativo na percepção pública'
-      : m.sentiment === 'positivo'
-      ? 'Cobertura favorável — oportunidade de amplificação e fortalecimento de narrativa'
-      : 'Cobertura factual neutra — baixo impacto direto na imagem',
-    url: m.url
-  }))
-
-  // Extrair tópicos principais dos títulos
-  const topicKeywords: Record<string, number> = {}
+  // Identifica narrativa dominante
+  const topics: Record<string, number> = {}
   data.mentions.forEach(m => {
-    const words = (m.title || '').split(/\s+/).filter(w => w.length > 4)
-    words.forEach(w => {
-      const lower = w.toLowerCase().replace(/[^a-záàâãéèêíïóôõöúüçñ]/g, '')
-      if (lower.length > 4) topicKeywords[lower] = (topicKeywords[lower] || 0) + 1
-    })
+    const words = (m.title || '').toLowerCase().split(/\s+/).filter(w => w.length > 5)
+    words.forEach(w => { topics[w] = (topics[w] || 0) + 1 })
   })
-  const mainTopics = Object.entries(topicKeywords)
+  const mainTopics = Object.entries(topics)
     .sort((a, b) => b[1] - a[1])
     .slice(0, 5)
     .map(([word]) => word.charAt(0).toUpperCase() + word.slice(1))
 
-  // Resumo executivo completo
+  // Constrói narrativa dominante
+  let narrativaDominante = 'Cobertura diversa sem narrativa única dominante'
+  if (negativeCount > positiveCount && negativeCount > 2) {
+    narrativaDominante = `Político enfrenta cobertura crítica focada em ${mainTopics[0] || 'questões diversas'}`
+  } else if (positiveCount > negativeCount && positiveCount > 2) {
+    narrativaDominante = `Cobertura favorável destaca atuação do político em ${mainTopics[0] || 'agenda positiva'}`
+  } else if (totalMentions < 3) {
+    narrativaDominante = 'Baixa exposição midiática no período'
+  }
+
+  // Top News com análise
+  const topNews = analyzedMentions.slice(0, 5).map(m => ({
+    title: m.title,
+    source: m.source,
+    sentiment: m.sentiment,
+    relevance: m.analysis,
+    url: m.url
+  }))
+
+  // Summary como um analista político escreveria
   const posPercent = totalMentions > 0 ? Math.round((positiveCount / totalMentions) * 100) : 0
   const negPercent = totalMentions > 0 ? Math.round((negativeCount / totalMentions) * 100) : 0
-  const neuPercent = totalMentions > 0 ? Math.round((neutralCount / totalMentions) * 100) : 0
 
-  const partyInfo = data.party ? ` (${data.party})` : ''
-  const positionInfo = data.position ? `, ${data.position}` : ''
-
-  let summary = `PANORAMA GERAL: No período analisado (${data.date}), ${data.politicianName}${partyInfo}${positionInfo} registrou ${totalMentions} menções na mídia tradicional e YouTube. `
+  let summary = `RELATÓRIO DE MONITORAMENTO — ${data.date}\n\n`
+  summary += `${data.politicianName}${data.party ? ` (${data.party})` : ''}${data.position ? `, ${data.position}` : ''}\n\n`
 
   if (totalMentions === 0) {
-    summary += 'Não foram identificadas menções relevantes no período, o que pode indicar baixa exposição midiática ou ausência de pautas com repercussão significativa. '
-    summary += 'Recomenda-se avaliar se a estratégia de comunicação está gerando visibilidade adequada.'
+    summary += `PANORAMA: Não foram identificadas menções relevantes no período analisado. `
+    summary += `A ausência de cobertura pode indicar momento de baixa exposição midiática. `
+    summary += `Recomenda-se avaliar oportunidades de pauta para retomar visibilidade.`
+  } else if (totalMentions < 3) {
+    summary += `PANORAMA: Cobertura limitada com apenas ${totalMentions} menção(ões) identificada(s). `
+    summary += `Amostra insuficiente para análise conclusiva. Score provisório de ${sentimentScore}/100. `
+    summary += `Recomenda-se aguardar mais dados ou intensificar ações de assessoria de imprensa.`
   } else {
-    // Análise de cobertura
-    summary += `ANÁLISE DE COBERTURA: A distribuição de sentimento das menções é: ${posPercent}% positivas (${positiveCount}), ${negPercent}% negativas (${negativeCount}) e ${neuPercent}% neutras (${neutralCount}). `
+    summary += `PANORAMA: A cobertura do dia apresenta ${totalMentions} menções na mídia e YouTube. `
+    summary += `Distribuição: ${positiveCount} favoráveis (${posPercent}%), ${negativeCount} críticas (${negPercent}%), ${neutralCount} neutras. `
+
+    summary += `\n\nNARRATIVA DOMINANTE: ${narrativaDominante}. `
 
     if (overallSentiment === 'positivo') {
-      summary += `O tom predominante da cobertura é favorável, com as menções positivas superando as negativas de forma significativa. Isso sugere um momento de capital político em alta e boa receptividade pública. `
+      summary += `O tom geral da cobertura é favorável, com destaque para notícias que fortalecem a imagem pública. `
+      summary += `Momento propício para amplificar conquistas e avançar agenda estratégica. `
     } else if (overallSentiment === 'negativo') {
-      summary += `O tom predominante é crítico, com as menções negativas superando as positivas. Esse padrão indica desgaste na percepção pública e potencial vulnerabilidade da imagem. `
+      summary += `O tom predominante é crítico, com cobertura que pressiona a imagem do político. `
+      summary += `Atenção especial aos temas que geraram repercussão negativa — resposta estratégica pode ser necessária. `
     } else if (overallSentiment === 'misto') {
-      summary += `A cobertura apresenta polarização, com presença significativa tanto de menções favoráveis quanto críticas. Isso indica um cenário disputado na opinião pública. `
+      summary += `A cobertura está dividida entre apoiadores e críticos. `
+      summary += `Cenário de disputa narrativa exige posicionamento cuidadoso. `
     } else {
-      summary += `A cobertura é predominantemente factual e neutra, sem tendência clara positiva ou negativa. O momento é estável, sem grandes oscilações de percepção. `
+      summary += `Cobertura predominantemente factual, sem tendência clara. `
+      summary += `Momento estável que pode ser aproveitado para pautar temas favoráveis. `
     }
 
-    // Impacto na imagem
-    summary += `IMPACTO NA IMAGEM: O score de percepção pública está em ${sentimentScore}/10. `
-    if (sentimentScore >= 7) {
-      summary += 'A imagem pública encontra-se fortalecida, com a cobertura contribuindo para consolidar uma narrativa favorável. '
-    } else if (sentimentScore >= 5) {
-      summary += 'A imagem se mantém em patamar neutro-positivo, sem grandes ameaças, mas também sem ganhos expressivos de capital político. '
-    } else if (sentimentScore >= 3) {
-      summary += 'A imagem pública demonstra sinais de desgaste. É recomendável ação proativa para reverter a tendência antes que se consolide. '
-    } else {
-      summary += 'A imagem pública está comprometida. A concentração de cobertura negativa exige resposta imediata e coordenada da equipe de comunicação. '
-    }
-
-    // Cenário de curto prazo
-    summary += 'CENÁRIO DE CURTO PRAZO: '
-    if (alertLevel === 'vermelho') {
-      summary += 'O volume de menções negativas sugere risco de escalada. Temas críticos podem ganhar tração nos próximos dias se não houver posicionamento estratégico.'
-    } else if (alertLevel === 'amarelo') {
-      summary += 'Há indicadores de atenção que merecem acompanhamento próximo. Uma gestão ativa da agenda pode evitar que temas negativos ganhem relevância.'
-    } else {
-      summary += 'O cenário de curto prazo é favorável para ações proativas de comunicação. Aproveitar o momento estável para fortalecer a agenda positiva é a estratégia recomendada.'
-    }
+    summary += `\n\nSCORE DE IMAGEM: ${sentimentScore}/100 — `
+    if (sentimentScore >= 70) summary += `capital político em alta.`
+    else if (sentimentScore >= 50) summary += `posição estável.`
+    else if (sentimentScore >= 30) summary += `sinais de desgaste.`
+    else summary += `situação crítica que demanda ação.`
   }
 
   // Recomendações estratégicas
   const recommendations: string[] = []
+
   if (alertLevel === 'vermelho') {
-    recommendations.push('URGENTE: Avaliar necessidade de pronunciamento oficial ou nota de esclarecimento sobre os temas críticos identificados')
-    recommendations.push('Ativar protocolo de gestão de crise — monitorar em tempo real a evolução das menções negativas nas próximas 24-48h')
-    recommendations.push('Mapear os veículos e formadores de opinião com maior impacto negativo para abordagem estratégica')
+    recommendations.push('PRIORITÁRIO: Avaliar necessidade de posicionamento público sobre os temas críticos identificados')
+    recommendations.push('Ativar monitoramento em tempo real nas próximas 24-48h para acompanhar desdobramentos')
+    recommendations.push('Preparar argumentos de defesa e mapear aliados para eventual contra-narrativa')
   } else if (alertLevel === 'amarelo') {
-    recommendations.push('Intensificar monitoramento dos temas que geraram cobertura negativa — preparar respostas caso haja escalada')
-    recommendations.push('Considerar pautar veículos de mídia com agenda positiva para contrabalançar as menções críticas')
-    recommendations.push('Reforçar presença em canais próprios com conteúdo que demonstre realizações e resultados')
+    recommendations.push('Acompanhar de perto os temas negativos — preparar respostas caso escale')
+    recommendations.push('Intensificar comunicação positiva para contrabalançar menções críticas')
+    recommendations.push('Avaliar oportunidades de pauta para redirecionar foco da cobertura')
   } else {
-    recommendations.push('Aproveitar o momento favorável para avançar pautas estratégicas e amplificar conquistas recentes')
-    recommendations.push('Fortalecer relacionamento com veículos que têm dado cobertura positiva — oferecer conteúdo exclusivo')
-    recommendations.push('Investir em conteúdo de YouTube/vídeo, formato com alto potencial de engajamento e viralização')
+    recommendations.push('Momento favorável para avançar agenda estratégica e amplificar conquistas')
+    recommendations.push('Fortalecer relacionamento com veículos que deram cobertura positiva')
+    recommendations.push('Investir em produção de conteúdo próprio para manter momentum')
   }
 
-  if (positiveCount > 0) {
-    recommendations.push(`Amplificar as ${positiveCount} menções positivas em canais próprios — compartilhar, comentar e expandir a narrativa favorável`)
-  }
-  if (totalMentions < 5) {
-    recommendations.push('Volume de menções baixo — considerar ações de assessoria de imprensa para aumentar a visibilidade na mídia')
-  }
-
-  // Riscos
+  // Riscos identificados
   const risks: Array<{ description: string; severity: 'baixo' | 'medio' | 'alto'; action: string }> = []
+
   if (negativeCount > 0) {
     const severity = negativeCount > 5 ? 'alto' : negativeCount > 2 ? 'medio' : 'baixo'
     risks.push({
-      description: `${negativeCount} menções com tom crítico detectadas — temas negativos podem ganhar tração se não forem gerenciados`,
+      description: `${negativeCount} menções com tom crítico podem ganhar tração se não gerenciadas`,
       severity,
       action: severity === 'alto'
-        ? 'Ação imediata recomendada: preparar posicionamento e monitorar repercussão em tempo real'
-        : 'Acompanhar evolução e preparar argumentos de defesa caso haja escalada'
-    })
-  }
-  if (totalMentions > 10 && negPercent > 40) {
-    risks.push({
-      description: 'Proporção elevada de menções negativas pode indicar início de ciclo de crise midiática',
-      severity: 'alto',
-      action: 'Reunir equipe de comunicação para definir estratégia de contenção nas próximas 24h'
+        ? 'Resposta imediata recomendada'
+        : 'Monitorar evolução e preparar posicionamento'
     })
   }
 
   // Oportunidades
   const opportunities: string[] = []
   if (positiveCount > 0) {
-    opportunities.push(`Capitalizar as ${positiveCount} menções positivas — usar como prova social em materiais de comunicação e redes`)
+    opportunities.push(`${positiveCount} menções positivas podem ser amplificadas nos canais próprios`)
   }
-  if (overallSentiment === 'positivo' || sentimentScore >= 7) {
-    opportunities.push('Momento favorável para lançar projetos, anúncios ou propostas — a percepção pública está receptiva')
-  }
-  if (neutralCount > positiveCount && neutralCount > 3) {
-    opportunities.push('Grande volume de menções neutras indica espaço para moldar a narrativa — assessoria de imprensa pode converter cobertura factual em favorável')
+  if (neutralCount > positiveCount) {
+    opportunities.push('Volume de cobertura neutra indica espaço para moldar narrativa favoravelmente')
   }
 
   return {
@@ -395,18 +528,33 @@ function analyzeLocally(data: DailyReportData): AIAnalysisResult {
     alertLevel,
     alertReason,
     topNews,
-    mainTopics: mainTopics.length > 0 ? mainTopics : ['política'],
+    mainTopics: mainTopics.length > 0 ? mainTopics : ['Política'],
     recommendations,
-    networkScores: data.networks.map(n => ({
-      network: n.network,
-      score: n.mentions > 0 ? Math.round(50 + ((n.positive - n.negative) / n.mentions) * 50) : 50,
-      trend: 'estavel' as const,
-      insight: n.mentions > 0
-        ? `${n.mentions} menções monitoradas: ${n.positive} favoráveis, ${n.negative} críticas. ${n.positive > n.negative ? 'Tom predominantemente positivo.' : n.negative > n.positive ? 'Tom predominantemente crítico — atenção recomendada.' : 'Cobertura equilibrada.'}`
-        : 'Sem dados suficientes para análise neste canal'
-    })),
+    networkScores: [
+      {
+        network: 'Mídia',
+        score: sentimentScore,
+        trend: 'estavel' as const,
+        insight: `${data.mentions.filter(m => m.platform === 'midia').length} notícias analisadas`
+      },
+      {
+        network: 'YouTube',
+        score: data.networks.find(n => n.network === 'YouTube')?.mentions || 0 > 0 ? sentimentScore : 0,
+        trend: 'estavel' as const,
+        insight: `${data.networks.find(n => n.network === 'YouTube')?.mentions || 0} vídeos monitorados`
+      }
+    ],
     risks,
-    opportunities
+    opportunities,
+    narrativaDominante,
+    temasCriticos: negativeCount > 0 ? mainTopics.slice(0, 3) : [],
+    tonDaCobertura: overallSentiment === 'positivo'
+      ? 'Predominantemente favorável'
+      : overallSentiment === 'negativo'
+        ? 'Predominantemente crítico'
+        : overallSentiment === 'misto'
+          ? 'Dividido entre apoio e críticas'
+          : 'Factual e equilibrado'
   }
 }
 
@@ -422,11 +570,18 @@ export async function analyzeSentimentAI(text: string): Promise<{
   try {
     const { data: response } = await supabase.functions.invoke('ai-analysis', {
       body: {
-        systemPrompt: 'Analise o sentimento do texto em relação a um político. Responda em JSON: {"sentiment": "positivo|negativo|neutro", "confidence": 0-1, "explanation": "breve explicação"}',
+        systemPrompt: `Você é um analista político APARTIDÁRIO. Classifique o sentimento do texto em relação ao político mencionado.
+
+REGRAS:
+- POSITIVO: Fortalece a imagem (elogios, conquistas, apoio)
+- NEGATIVO: Enfraquece a imagem (críticas, escândalos, rejeição)
+- NEUTRO: Factual, sem impacto claro na imagem
+
+Responda em JSON: {"sentiment": "positivo|negativo|neutro", "confidence": 0-1, "explanation": "breve explicação"}`,
         userMessage: text,
         model: 'gpt-4o-mini',
-        temperature: 0.1,
-        maxTokens: 150
+        temperature: 0.2,
+        maxTokens: 200
       }
     })
 
@@ -446,13 +601,19 @@ function analyzeSentimentLocal(text: string): {
   explanation: string
 } {
   const lower = text.toLowerCase()
-  const positiveWords = ['aprova', 'conquista', 'sucesso', 'vitória', 'apoio', 'elogia']
-  const negativeWords = ['critica', 'acusa', 'escândalo', 'crise', 'corrupção', 'fraude']
+  const positiveWords = ['aprova', 'conquista', 'sucesso', 'vitória', 'apoio', 'elogia', 'destaca']
+  const negativeWords = ['critica', 'acusa', 'escândalo', 'crise', 'corrupção', 'fraude', 'investiga']
+
   const posMatches = positiveWords.filter(w => lower.includes(w)).length
   const negMatches = negativeWords.filter(w => lower.includes(w)).length
-  if (posMatches > negMatches) return { sentiment: 'positivo', confidence: 0.7, explanation: 'Palavras positivas detectadas' }
-  if (negMatches > posMatches) return { sentiment: 'negativo', confidence: 0.7, explanation: 'Palavras negativas detectadas' }
-  return { sentiment: 'neutro', confidence: 0.5, explanation: 'Conteúdo aparentemente neutro' }
+
+  if (posMatches > negMatches) {
+    return { sentiment: 'positivo', confidence: 0.7, explanation: 'Indicadores de cobertura favorável' }
+  }
+  if (negMatches > posMatches) {
+    return { sentiment: 'negativo', confidence: 0.7, explanation: 'Indicadores de cobertura crítica' }
+  }
+  return { sentiment: 'neutro', confidence: 0.5, explanation: 'Cobertura aparentemente factual' }
 }
 
 // ============================================
@@ -460,10 +621,9 @@ function analyzeSentimentLocal(text: string): {
 // ============================================
 
 export function isAIConfigured(): boolean {
-  // Always true now - edge function handles fallback
-  return true
+  return true // Edge function handles fallback
 }
 
 export function getAIStatus(): { configured: boolean; model: string } {
-  return { configured: true, model: 'gpt-4o-mini (via edge function)' }
+  return { configured: true, model: 'gpt-4o-mini (Analista Político Sênior)' }
 }
