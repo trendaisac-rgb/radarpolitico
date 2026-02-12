@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   BarChart3, Loader2, RefreshCw, Plus, FileDown, ChevronDown,
-  Brain, FileText, Lightbulb, CheckCircle2, Sparkles, AlertTriangle, TrendingUp as TrendingUpIcon
+  Brain, FileText, Lightbulb, CheckCircle2, Sparkles, AlertTriangle, TrendingUp as TrendingUpIcon, Palette
 } from 'lucide-react'
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -81,6 +81,161 @@ const NETWORKS = [
 ]
 
 // ============================================
+// THEME COLORS
+// ============================================
+
+type ThemeKey = 'azul' | 'verde' | 'vermelho' | 'amarelo' | 'roxo' | 'teal'
+
+const THEMES: Record<ThemeKey, {
+  label: string
+  dot: string
+  bg: string
+  bgGradient: string
+  headerBg: string
+  headerBorder: string
+  cardBg: string
+  cardBorder: string
+  cardHoverBorder: string
+  accentText: string
+  accentMuted: string
+  chartGrid: string
+  tooltipBg: string
+  tooltipBorder: string
+  filterBg: string
+  filterActive: string
+  mutedText: string
+  brightText: string
+  bodyText: string
+}> = {
+  azul: {
+    label: 'Azul',
+    dot: 'bg-[hsl(210,60%,45%)]',
+    bg: 'hsl(215,25%,9%)',
+    bgGradient: 'linear-gradient(135deg, hsl(215,30%,8%) 0%, hsl(220,35%,12%) 50%, hsl(210,25%,10%) 100%)',
+    headerBg: 'hsl(215,25%,11%)',
+    headerBorder: 'hsl(215,25%,18%)',
+    cardBg: 'hsl(215,25%,12%)',
+    cardBorder: 'hsl(215,25%,20%)',
+    cardHoverBorder: 'hsl(215,25%,30%)',
+    accentText: 'hsl(210,40%,60%)',
+    accentMuted: 'hsl(210,40%,20%)',
+    chartGrid: 'hsl(215,25%,20%)',
+    tooltipBg: 'hsl(215,25%,15%)',
+    tooltipBorder: 'hsl(215,25%,25%)',
+    filterBg: 'hsl(215,25%,15%)',
+    filterActive: 'hsl(215,25%,25%)',
+    mutedText: 'hsl(215,15%,50%)',
+    brightText: 'hsl(210,40%,98%)',
+    bodyText: 'hsl(215,15%,65%)',
+  },
+  verde: {
+    label: 'Verde',
+    dot: 'bg-[hsl(152,55%,42%)]',
+    bg: 'hsl(155,25%,9%)',
+    bgGradient: 'linear-gradient(135deg, hsl(155,30%,8%) 0%, hsl(160,35%,12%) 50%, hsl(150,25%,10%) 100%)',
+    headerBg: 'hsl(155,25%,11%)',
+    headerBorder: 'hsl(155,25%,18%)',
+    cardBg: 'hsl(155,25%,12%)',
+    cardBorder: 'hsl(155,25%,20%)',
+    cardHoverBorder: 'hsl(155,25%,30%)',
+    accentText: 'hsl(152,45%,55%)',
+    accentMuted: 'hsl(152,40%,20%)',
+    chartGrid: 'hsl(155,25%,20%)',
+    tooltipBg: 'hsl(155,25%,15%)',
+    tooltipBorder: 'hsl(155,25%,25%)',
+    filterBg: 'hsl(155,25%,15%)',
+    filterActive: 'hsl(155,25%,25%)',
+    mutedText: 'hsl(155,15%,50%)',
+    brightText: 'hsl(150,40%,98%)',
+    bodyText: 'hsl(155,15%,65%)',
+  },
+  vermelho: {
+    label: 'Vermelho',
+    dot: 'bg-[hsl(0,65%,45%)]',
+    bg: 'hsl(0,20%,9%)',
+    bgGradient: 'linear-gradient(135deg, hsl(0,25%,8%) 0%, hsl(355,30%,12%) 50%, hsl(5,20%,10%) 100%)',
+    headerBg: 'hsl(0,20%,11%)',
+    headerBorder: 'hsl(0,20%,18%)',
+    cardBg: 'hsl(0,20%,12%)',
+    cardBorder: 'hsl(0,20%,20%)',
+    cardHoverBorder: 'hsl(0,20%,30%)',
+    accentText: 'hsl(0,55%,60%)',
+    accentMuted: 'hsl(0,40%,20%)',
+    chartGrid: 'hsl(0,20%,20%)',
+    tooltipBg: 'hsl(0,20%,15%)',
+    tooltipBorder: 'hsl(0,20%,25%)',
+    filterBg: 'hsl(0,20%,15%)',
+    filterActive: 'hsl(0,20%,25%)',
+    mutedText: 'hsl(0,12%,50%)',
+    brightText: 'hsl(0,30%,98%)',
+    bodyText: 'hsl(0,12%,65%)',
+  },
+  amarelo: {
+    label: 'Amarelo',
+    dot: 'bg-[hsl(43,90%,50%)]',
+    bg: 'hsl(40,20%,9%)',
+    bgGradient: 'linear-gradient(135deg, hsl(40,25%,8%) 0%, hsl(45,30%,12%) 50%, hsl(35,20%,10%) 100%)',
+    headerBg: 'hsl(40,20%,11%)',
+    headerBorder: 'hsl(40,20%,18%)',
+    cardBg: 'hsl(40,20%,12%)',
+    cardBorder: 'hsl(40,20%,20%)',
+    cardHoverBorder: 'hsl(40,20%,30%)',
+    accentText: 'hsl(43,80%,55%)',
+    accentMuted: 'hsl(43,50%,20%)',
+    chartGrid: 'hsl(40,20%,20%)',
+    tooltipBg: 'hsl(40,20%,15%)',
+    tooltipBorder: 'hsl(40,20%,25%)',
+    filterBg: 'hsl(40,20%,15%)',
+    filterActive: 'hsl(40,20%,25%)',
+    mutedText: 'hsl(40,12%,50%)',
+    brightText: 'hsl(40,30%,98%)',
+    bodyText: 'hsl(40,12%,65%)',
+  },
+  roxo: {
+    label: 'Roxo',
+    dot: 'bg-[hsl(270,55%,50%)]',
+    bg: 'hsl(270,20%,9%)',
+    bgGradient: 'linear-gradient(135deg, hsl(270,25%,8%) 0%, hsl(275,30%,13%) 50%, hsl(265,20%,10%) 100%)',
+    headerBg: 'hsl(270,20%,11%)',
+    headerBorder: 'hsl(270,20%,18%)',
+    cardBg: 'hsl(270,20%,12%)',
+    cardBorder: 'hsl(270,20%,20%)',
+    cardHoverBorder: 'hsl(270,20%,30%)',
+    accentText: 'hsl(270,50%,60%)',
+    accentMuted: 'hsl(270,40%,20%)',
+    chartGrid: 'hsl(270,20%,20%)',
+    tooltipBg: 'hsl(270,20%,15%)',
+    tooltipBorder: 'hsl(270,20%,25%)',
+    filterBg: 'hsl(270,20%,15%)',
+    filterActive: 'hsl(270,20%,25%)',
+    mutedText: 'hsl(270,12%,50%)',
+    brightText: 'hsl(270,30%,98%)',
+    bodyText: 'hsl(270,12%,65%)',
+  },
+  teal: {
+    label: 'Teal',
+    dot: 'bg-[hsl(185,55%,42%)]',
+    bg: 'hsl(185,25%,9%)',
+    bgGradient: 'linear-gradient(135deg, hsl(185,30%,8%) 0%, hsl(190,35%,12%) 50%, hsl(180,25%,10%) 100%)',
+    headerBg: 'hsl(185,25%,11%)',
+    headerBorder: 'hsl(185,25%,18%)',
+    cardBg: 'hsl(185,25%,12%)',
+    cardBorder: 'hsl(185,25%,20%)',
+    cardHoverBorder: 'hsl(185,25%,30%)',
+    accentText: 'hsl(185,45%,55%)',
+    accentMuted: 'hsl(185,40%,20%)',
+    chartGrid: 'hsl(185,25%,20%)',
+    tooltipBg: 'hsl(185,25%,15%)',
+    tooltipBorder: 'hsl(185,25%,25%)',
+    filterBg: 'hsl(185,25%,15%)',
+    filterActive: 'hsl(185,25%,25%)',
+    mutedText: 'hsl(185,15%,50%)',
+    brightText: 'hsl(185,40%,98%)',
+    bodyText: 'hsl(185,15%,65%)',
+  },
+}
+
+// ============================================
 // MAIN COMPONENT
 // ============================================
 
@@ -96,6 +251,16 @@ export default function Dashboard() {
   const [loadingAI, setLoadingAI] = useState(false)
   const [showReportModal, setShowReportModal] = useState(false)
   const [showPoliticianMenu, setShowPoliticianMenu] = useState(false)
+  const [themeKey, setThemeKey] = useState<ThemeKey>(() => {
+    return (localStorage.getItem('dashboard-theme') as ThemeKey) || 'azul'
+  })
+
+  const t = THEMES[themeKey]
+
+  const handleThemeChange = (key: ThemeKey) => {
+    setThemeKey(key)
+    localStorage.setItem('dashboard-theme', key)
+  }
 
   // Auth
   useEffect(() => {
@@ -335,15 +500,15 @@ export default function Dashboard() {
 
   if (checkingAuth || loadingPoliticians) {
     return (
-      <div className="min-h-screen bg-[hsl(215,25%,9%)] flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-[hsl(210,40%,60%)]" />
+      <div className="min-h-screen flex items-center justify-center" style={{ background: t.bgGradient }}>
+        <Loader2 className="h-8 w-8 animate-spin" style={{ color: t.accentText }} />
       </div>
     )
   }
 
   if (!politicians || politicians.length === 0) {
     return (
-      <div className="min-h-screen bg-[hsl(215,25%,9%)] text-[hsl(210,40%,98%)]">
+      <div className="min-h-screen" style={{ background: t.bgGradient, color: t.brightText }}>
         <DashHeader
           politician={null}
           politicians={[]}
@@ -352,16 +517,19 @@ export default function Dashboard() {
           onAddPolitician={() => navigate('/add-politician')}
           onOpenReport={() => {}}
           isRefreshing={false}
+          theme={t}
+          themeKey={themeKey}
+          onThemeChange={handleThemeChange}
         />
         <main className="container mx-auto px-4 py-12">
-          <Card className="max-w-md mx-auto text-center bg-[hsl(215,25%,12%)] border-[hsl(215,25%,20%)]">
+          <Card className="max-w-md mx-auto text-center" style={{ backgroundColor: t.cardBg, borderColor: t.cardBorder }}>
             <CardContent className="pt-8 pb-8">
-              <div className="w-16 h-16 bg-[hsl(210,40%,20%)] rounded-full flex items-center justify-center mx-auto mb-4">
-                <BarChart3 className="h-8 w-8 text-[hsl(210,40%,60%)]" />
+              <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4" style={{ backgroundColor: t.accentMuted }}>
+                <BarChart3 className="h-8 w-8" style={{ color: t.accentText }} />
               </div>
-              <h2 className="text-xl font-semibold mb-2 text-[hsl(210,40%,98%)]">Nenhum político cadastrado</h2>
-              <p className="text-[hsl(215,15%,65%)] mb-6">Cadastre um político para começar o monitoramento</p>
-              <Button onClick={() => navigate('/add-politician')} size="lg" className="bg-[hsl(210,40%,50%)] hover:bg-[hsl(210,40%,40%)] text-white">
+              <h2 className="text-xl font-semibold mb-2" style={{ color: t.brightText }}>Nenhum político cadastrado</h2>
+              <p className="mb-6" style={{ color: t.bodyText }}>Cadastre um político para começar o monitoramento</p>
+              <Button onClick={() => navigate('/add-politician')} size="lg" className="text-white" style={{ backgroundColor: t.accentText }}>
                 <Plus className="h-4 w-4 mr-2" />
                 Cadastrar Político
               </Button>
@@ -371,6 +539,8 @@ export default function Dashboard() {
       </div>
     )
   }
+
+  // duplicate empty state removed
 
   // ============================================
   // SCORE COLOR
@@ -394,7 +564,7 @@ export default function Dashboard() {
   // ============================================
 
   return (
-    <div className="min-h-screen bg-[hsl(215,25%,9%)] text-[hsl(210,40%,98%)]">
+    <div className="min-h-screen" style={{ background: t.bgGradient, color: t.brightText }}>
       {/* Header */}
       <DashHeader
         politician={currentPolitician || null}
@@ -404,14 +574,15 @@ export default function Dashboard() {
         onAddPolitician={() => navigate('/add-politician')}
         onOpenReport={() => setShowReportModal(true)}
         isRefreshing={isMonitoring || loadingSocial}
+        theme={t}
+        themeKey={themeKey}
+        onThemeChange={handleThemeChange}
       />
 
       <main className="container mx-auto px-4 py-6 space-y-6">
 
-        {/* ============================================ */}
-        {/* SCORE + EVOLUTION CHART (side by side) */}
-        {/* ============================================ */}
-        <Card className="bg-[hsl(215,25%,12%)] border-[hsl(215,25%,20%)]">
+        {/* SCORE + EVOLUTION CHART */}
+        <Card style={{ backgroundColor: t.cardBg, borderColor: t.cardBorder }}>
           <CardContent className="p-6">
             <div className="flex flex-col lg:flex-row gap-6">
               {/* Score grande */}
@@ -419,10 +590,11 @@ export default function Dashboard() {
                 <div className={`text-6xl font-bold tracking-tight ${getScoreColor(score)}`}>
                   {score10}
                 </div>
-                <p className="text-xs uppercase tracking-widest text-[hsl(215,15%,50%)] mt-2 font-medium">
+                <p className="text-xs uppercase tracking-widest mt-2 font-medium" style={{ color: t.mutedText }}>
                   Score Geral
                 </p>
-                <p className={`text-sm mt-1 ${trend > 0 ? 'text-[hsl(152,55%,50%)]' : trend < 0 ? 'text-[hsl(0,72%,55%)]' : 'text-[hsl(215,15%,50%)]'}`}>
+                <p className={`text-sm mt-1 ${trend > 0 ? 'text-[hsl(152,55%,50%)]' : trend < 0 ? 'text-[hsl(0,72%,55%)]' : ''}`}
+                   style={trend === 0 ? { color: t.mutedText } : {}}>
                   {trend > 0 ? '↑' : trend < 0 ? '↓' : '→'} {Math.abs(trend).toFixed(1)} vs anterior
                 </p>
               </div>
@@ -431,21 +603,21 @@ export default function Dashboard() {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between mb-3">
                   <div>
-                    <h3 className="text-sm font-medium flex items-center gap-2 text-[hsl(210,40%,85%)]">
+                    <h3 className="text-sm font-medium flex items-center gap-2" style={{ color: `${t.brightText}dd` }}>
                       📊 Evolução do Score
                     </h3>
-                    <p className="text-xs text-[hsl(215,15%,50%)]">Exibindo dados de: {todayStr}</p>
+                    <p className="text-xs" style={{ color: t.mutedText }}>Exibindo dados de: {todayStr}</p>
                   </div>
-                  <div className="flex gap-1 bg-[hsl(215,25%,15%)] rounded-lg p-1">
+                  <div className="flex gap-1 rounded-lg p-1" style={{ backgroundColor: t.filterBg }}>
                     {[{ v: 7, l: '7 dias' }, { v: 30, l: '30 dias' }, { v: 90, l: '90 dias' }].map(opt => (
                       <button
                         key={opt.v}
                         onClick={() => setChartPeriod(opt.v)}
-                        className={`px-3 py-1 text-xs rounded-md transition-all ${
-                          chartPeriod === opt.v
-                            ? 'bg-[hsl(215,25%,25%)] text-[hsl(210,40%,98%)]'
-                            : 'text-[hsl(215,15%,50%)] hover:text-[hsl(210,40%,85%)]'
-                        }`}
+                        className="px-3 py-1 text-xs rounded-md transition-all"
+                        style={{
+                          backgroundColor: chartPeriod === opt.v ? t.filterActive : 'transparent',
+                          color: chartPeriod === opt.v ? t.brightText : t.mutedText
+                        }}
                       >
                         {opt.l}
                       </button>
@@ -461,15 +633,15 @@ export default function Dashboard() {
                           <stop offset="95%" stopColor={getChartColor()} stopOpacity={0.02} />
                         </linearGradient>
                       </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(215,25%,20%)" />
-                      <XAxis dataKey="data" tick={{ fontSize: 11, fill: 'hsl(215,15%,50%)' }} tickLine={false} axisLine={false} />
-                      <YAxis domain={[0, 100]} tick={{ fontSize: 11, fill: 'hsl(215,15%,50%)' }} tickLine={false} axisLine={false} />
+                      <CartesianGrid strokeDasharray="3 3" stroke={t.chartGrid} />
+                      <XAxis dataKey="data" tick={{ fontSize: 11, fill: t.mutedText }} tickLine={false} axisLine={false} />
+                      <YAxis domain={[0, 100]} tick={{ fontSize: 11, fill: t.mutedText }} tickLine={false} axisLine={false} />
                       <Tooltip
-                        contentStyle={{ backgroundColor: 'hsl(215,25%,15%)', border: '1px solid hsl(215,25%,25%)', borderRadius: '8px', color: 'hsl(210,40%,90%)' }}
-                        labelStyle={{ fontWeight: 'bold', marginBottom: '4px', color: 'hsl(210,40%,90%)' }}
+                        contentStyle={{ backgroundColor: t.tooltipBg, border: `1px solid ${t.tooltipBorder}`, borderRadius: '8px', color: `${t.brightText}ee` }}
+                        labelStyle={{ fontWeight: 'bold', marginBottom: '4px', color: `${t.brightText}ee` }}
                         formatter={(value: number) => [`Score: ${value}`, '']}
                       />
-                      <ReferenceLine y={50} stroke="hsl(215,25%,25%)" strokeDasharray="5 5" />
+                      <ReferenceLine y={50} stroke={t.chartGrid} strokeDasharray="5 5" />
                       <Area
                         type="monotone"
                         dataKey="score"
@@ -477,7 +649,7 @@ export default function Dashboard() {
                         strokeWidth={2}
                         fill="url(#dashScoreGrad)"
                         dot={{ r: 2, fill: getChartColor(), stroke: getChartColor() }}
-                        activeDot={{ r: 5, fill: getChartColor(), stroke: 'hsl(215,25%,12%)', strokeWidth: 2 }}
+                        activeDot={{ r: 5, fill: getChartColor(), stroke: t.cardBg, strokeWidth: 2 }}
                       />
                     </AreaChart>
                   </ResponsiveContainer>
@@ -487,40 +659,42 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        {/* ============================================ */}
         {/* PERFORMANCE POR REDE */}
-        {/* ============================================ */}
         <div>
-          <h2 className="text-sm font-semibold mb-4 flex items-center gap-2 text-[hsl(210,40%,85%)]">
+          <h2 className="text-sm font-semibold mb-4 flex items-center gap-2" style={{ color: `${t.brightText}dd` }}>
             📊 Performance por Rede
-            <span className="text-[hsl(215,15%,50%)] font-normal">— {todayStr}</span>
+            <span className="font-normal" style={{ color: t.mutedText }}>— {todayStr}</span>
           </h2>
           <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
             {NETWORKS.map(net => {
               const data = networkData[net.key]
               const hasMentions = data && data.mencoes > 0
               return (
-                <Card key={net.key} className="bg-[hsl(215,25%,12%)] border-[hsl(215,25%,20%)] hover:border-[hsl(215,25%,30%)] transition-colors">
+                <Card key={net.key} className="transition-colors" style={{ backgroundColor: t.cardBg, borderColor: t.cardBorder }}
+                  onMouseEnter={e => (e.currentTarget.style.borderColor = t.cardHoverBorder)}
+                  onMouseLeave={e => (e.currentTarget.style.borderColor = t.cardBorder)}
+                >
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-2">
                         <span className="text-lg">{net.icon}</span>
-                        <span className="font-medium text-sm text-[hsl(210,40%,90%)]">{net.label}</span>
+                        <span className="font-medium text-sm" style={{ color: `${t.brightText}ee` }}>{net.label}</span>
                       </div>
-                      <ChevronDown className="h-4 w-4 text-[hsl(215,15%,40%)]" />
+                      <ChevronDown className="h-4 w-4" style={{ color: `${t.mutedText}88` }} />
                     </div>
-                    <div className={`text-2xl font-bold mb-1 ${hasMentions ? 'text-[hsl(152,55%,50%)]' : 'text-[hsl(215,15%,40%)]'}`}>
+                    <div className={`text-2xl font-bold mb-1 ${hasMentions ? 'text-[hsl(152,55%,50%)]' : ''}`}
+                         style={!hasMentions ? { color: `${t.mutedText}88` } : {}}>
                       {data?.mencoes || 0}
                     </div>
-                    <p className="text-xs text-[hsl(215,15%,50%)]">menções</p>
+                    <p className="text-xs" style={{ color: t.mutedText }}>menções</p>
                     {data?.status && (
-                      <p className="text-xs text-[hsl(215,15%,40%)] mt-2">{data.status}</p>
+                      <p className="text-xs mt-2" style={{ color: `${t.mutedText}88` }}>{data.status}</p>
                     )}
                     {hasMentions && (
                       <div className="flex gap-3 mt-2 text-xs">
                         <span className="text-[hsl(152,55%,50%)]">+{data.sentimento_positivo}</span>
                         <span className="text-[hsl(0,72%,55%)]">-{data.sentimento_negativo}</span>
-                        <span className="text-[hsl(215,15%,50%)]">~{data.sentimento_neutro}</span>
+                        <span style={{ color: t.mutedText }}>~{data.sentimento_neutro}</span>
                       </div>
                     )}
                   </CardContent>
@@ -530,47 +704,43 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* ============================================ */}
         {/* ANÁLISE & RECOMENDAÇÕES */}
-        {/* ============================================ */}
         <div>
-          <h2 className="text-sm font-semibold mb-4 flex items-center gap-2 text-[hsl(210,40%,85%)]">
+          <h2 className="text-sm font-semibold mb-4 flex items-center gap-2" style={{ color: `${t.brightText}dd` }}>
             🧠 Análise & Recomendações
           </h2>
 
           {loadingAI ? (
-            <Card className="bg-[hsl(215,25%,12%)] border-[hsl(215,25%,20%)]">
+            <Card style={{ backgroundColor: t.cardBg, borderColor: t.cardBorder }}>
               <CardContent className="py-12 text-center">
-                <Brain className="h-10 w-10 mx-auto text-[hsl(210,40%,50%)] mb-3 animate-pulse" />
-                <p className="text-sm text-[hsl(215,15%,50%)]">Analisando com IA...</p>
+                <Brain className="h-10 w-10 mx-auto mb-3 animate-pulse" style={{ color: t.accentText }} />
+                <p className="text-sm" style={{ color: t.mutedText }}>Analisando com IA...</p>
               </CardContent>
             </Card>
           ) : insightsData ? (
             <div className="grid md:grid-cols-2 gap-4">
-              {/* Sumário do Dia */}
-              <Card className="bg-[hsl(215,25%,12%)] border-[hsl(215,25%,20%)]">
+              <Card style={{ backgroundColor: t.cardBg, borderColor: t.cardBorder }}>
                 <CardContent className="p-5">
-                  <h3 className="font-medium text-sm flex items-center gap-2 mb-3 text-[hsl(210,40%,90%)]">
-                    <FileText className="h-4 w-4 text-[hsl(210,40%,60%)]" />
+                  <h3 className="font-medium text-sm flex items-center gap-2 mb-3" style={{ color: `${t.brightText}ee` }}>
+                    <FileText className="h-4 w-4" style={{ color: t.accentText }} />
                     Sumário do Dia
                   </h3>
-                  <p className="text-sm text-[hsl(215,15%,65%)] leading-relaxed">
+                  <p className="text-sm leading-relaxed" style={{ color: t.bodyText }}>
                     {insightsData.sumario}
                   </p>
                 </CardContent>
               </Card>
 
-              {/* Recomendações */}
-              <Card className="bg-[hsl(215,25%,12%)] border-[hsl(215,25%,20%)]">
+              <Card style={{ backgroundColor: t.cardBg, borderColor: t.cardBorder }}>
                 <CardContent className="p-5">
-                  <h3 className="font-medium text-sm flex items-center gap-2 mb-3 text-[hsl(210,40%,90%)]">
+                  <h3 className="font-medium text-sm flex items-center gap-2 mb-3" style={{ color: `${t.brightText}ee` }}>
                     <Lightbulb className="h-4 w-4 text-[hsl(43,96%,56%)]" />
                     Recomendações
                   </h3>
                   <ul className="space-y-2">
                     {insightsData.recomendacoes.slice(0, 4).map((rec, i) => (
-                      <li key={i} className="flex gap-2 text-sm text-[hsl(215,15%,65%)]">
-                        <span className="text-[hsl(210,40%,50%)] mt-0.5">→</span>
+                      <li key={i} className="flex gap-2 text-sm" style={{ color: t.bodyText }}>
+                        <span className="mt-0.5" style={{ color: t.accentText }}>→</span>
                         <span>{rec}</span>
                       </li>
                     ))}
@@ -579,21 +749,21 @@ export default function Dashboard() {
               </Card>
             </div>
           ) : (
-            <Card className="bg-[hsl(215,25%,12%)] border-[hsl(215,25%,20%)]">
+            <Card style={{ backgroundColor: t.cardBg, borderColor: t.cardBorder }}>
               <CardContent className="py-10 text-center">
-                <Brain className="h-10 w-10 mx-auto text-[hsl(215,15%,30%)] mb-3 opacity-50" />
-                <p className="text-sm text-[hsl(215,15%,50%)]">Clique em "Atualizar" para gerar a análise</p>
+                <Brain className="h-10 w-10 mx-auto mb-3 opacity-50" style={{ color: `${t.mutedText}66` }} />
+                <p className="text-sm" style={{ color: t.mutedText }}>Clique em "Atualizar" para gerar a análise</p>
               </CardContent>
             </Card>
           )}
 
-          {/* Riscos e Oportunidades (if AI generated) */}
+          {/* Riscos e Oportunidades */}
           {aiAnalysis && ((aiAnalysis.risks && aiAnalysis.risks.length > 0) || (aiAnalysis.opportunities && aiAnalysis.opportunities.length > 0)) && (
             <div className="grid md:grid-cols-2 gap-4 mt-4">
               {aiAnalysis.risks && aiAnalysis.risks.length > 0 && (
-                <Card className="bg-[hsl(215,25%,12%)] border-[hsl(0,30%,25%)]">
+                <Card style={{ backgroundColor: t.cardBg, borderColor: 'hsl(0,30%,25%)' }}>
                   <CardContent className="p-5">
-                    <h3 className="font-medium text-sm flex items-center gap-2 mb-3 text-[hsl(210,40%,90%)]">
+                    <h3 className="font-medium text-sm flex items-center gap-2 mb-3" style={{ color: `${t.brightText}ee` }}>
                       <AlertTriangle className="h-4 w-4 text-[hsl(0,72%,55%)]" />
                       Pontos de Atenção
                     </h3>
@@ -606,9 +776,9 @@ export default function Dashboard() {
                               risk.severity === 'medio' ? 'bg-[hsl(43,50%,20%)] text-[hsl(43,96%,70%)]' :
                               'bg-[hsl(152,30%,20%)] text-[hsl(152,55%,60%)]'
                             }`}>{risk.severity?.toUpperCase()}</Badge>
-                            <span className="text-sm text-[hsl(215,15%,65%)]">{risk.description}</span>
+                            <span className="text-sm" style={{ color: t.bodyText }}>{risk.description}</span>
                           </div>
-                          {risk.action && <p className="text-xs text-[hsl(215,15%,45%)] ml-14 italic">{risk.action}</p>}
+                          {risk.action && <p className="text-xs ml-14 italic" style={{ color: `${t.mutedText}bb` }}>{risk.action}</p>}
                         </li>
                       ))}
                     </ul>
@@ -616,15 +786,15 @@ export default function Dashboard() {
                 </Card>
               )}
               {aiAnalysis.opportunities && aiAnalysis.opportunities.length > 0 && (
-                <Card className="bg-[hsl(215,25%,12%)] border-[hsl(152,30%,20%)]">
+                <Card style={{ backgroundColor: t.cardBg, borderColor: 'hsl(152,30%,20%)' }}>
                   <CardContent className="p-5">
-                    <h3 className="font-medium text-sm flex items-center gap-2 mb-3 text-[hsl(210,40%,90%)]">
+                    <h3 className="font-medium text-sm flex items-center gap-2 mb-3" style={{ color: `${t.brightText}ee` }}>
                       <TrendingUpIcon className="h-4 w-4 text-[hsl(152,55%,50%)]" />
                       Oportunidades
                     </h3>
                     <ul className="space-y-2">
                       {aiAnalysis.opportunities.slice(0, 4).map((opp, i) => (
-                        <li key={i} className="flex gap-2 text-sm text-[hsl(215,15%,65%)]">
+                        <li key={i} className="flex gap-2 text-sm" style={{ color: t.bodyText }}>
                           <TrendingUpIcon className="h-4 w-4 text-[hsl(152,55%,50%)] shrink-0 mt-0.5" />
                           <span>{opp}</span>
                         </li>
@@ -638,7 +808,7 @@ export default function Dashboard() {
         </div>
 
         {/* Footer */}
-        <footer className="text-center py-6 text-xs text-[hsl(215,15%,40%)]">
+        <footer className="text-center py-6 text-xs" style={{ color: `${t.mutedText}88` }}>
           Monitor Político 360° • Dados do Supabase • Atualizado diariamente
         </footer>
       </main>
@@ -678,6 +848,8 @@ export default function Dashboard() {
 // HEADER COMPONENT
 // ============================================
 
+
+
 function DashHeader({
   politician,
   politicians,
@@ -685,7 +857,10 @@ function DashHeader({
   onRefresh,
   onAddPolitician,
   onOpenReport,
-  isRefreshing
+  isRefreshing,
+  theme: t,
+  themeKey,
+  onThemeChange
 }: {
   politician: Politician | null
   politicians: Politician[]
@@ -694,46 +869,53 @@ function DashHeader({
   onAddPolitician: () => void
   onOpenReport: () => void
   isRefreshing: boolean
+  theme: typeof THEMES[ThemeKey]
+  themeKey: ThemeKey
+  onThemeChange: (key: ThemeKey) => void
 }) {
   const navigate = useNavigate()
 
   return (
-    <header className="border-b border-[hsl(215,25%,18%)] bg-[hsl(215,25%,11%)] sticky top-0 z-50">
+    <header className="border-b sticky top-0 z-50" style={{ borderColor: t.headerBorder, backgroundColor: t.headerBg }}>
       <div className="container mx-auto px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <span className="text-xl">🏛️</span>
           <div>
-            <h1 className="font-bold text-base text-[hsl(210,40%,98%)]">Monitor Político 360°</h1>
-            <p className="text-xs text-[hsl(215,15%,50%)]">Análise diária de reputação e presença digital</p>
+            <h1 className="font-bold text-base" style={{ color: t.brightText }}>Monitor Político 360°</h1>
+            <p className="text-xs" style={{ color: t.mutedText }}>Análise diária de reputação e presença digital</p>
           </div>
         </div>
 
         <div className="flex items-center gap-3">
+          {/* Theme picker */}
+          <div className="relative group">
+            <button className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg transition-colors" style={{ color: t.bodyText }}
+              title="Tema">
+              <Palette className="h-4 w-4" />
+            </button>
+            <div className="absolute right-0 top-full mt-1 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 p-2 flex gap-1.5"
+                 style={{ backgroundColor: t.tooltipBg, border: `1px solid ${t.tooltipBorder}` }}>
+              {(Object.keys(THEMES) as ThemeKey[]).map(key => (
+                <button
+                  key={key}
+                  onClick={() => onThemeChange(key)}
+                  className={`w-6 h-6 rounded-full transition-all ${THEMES[key].dot} ${themeKey === key ? 'ring-2 ring-white ring-offset-1 ring-offset-transparent scale-110' : 'hover:scale-110'}`}
+                  title={THEMES[key].label}
+                />
+              ))}
+            </div>
+          </div>
+
           {/* Action buttons */}
           <div className="hidden sm:flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onRefresh}
-              disabled={isRefreshing}
-              className="text-[hsl(215,15%,65%)] hover:text-[hsl(210,40%,98%)] hover:bg-[hsl(215,25%,18%)]"
-            >
+            <Button variant="ghost" size="sm" onClick={onRefresh} disabled={isRefreshing}
+              style={{ color: t.bodyText }}>
               {isRefreshing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
             </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onOpenReport}
-              className="text-[hsl(215,15%,65%)] hover:text-[hsl(210,40%,98%)] hover:bg-[hsl(215,25%,18%)]"
-            >
+            <Button variant="ghost" size="sm" onClick={onOpenReport} style={{ color: t.bodyText }}>
               <FileDown className="h-4 w-4" />
             </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onAddPolitician}
-              className="text-[hsl(215,15%,65%)] hover:text-[hsl(210,40%,98%)] hover:bg-[hsl(215,25%,18%)]"
-            >
+            <Button variant="ghost" size="sm" onClick={onAddPolitician} style={{ color: t.bodyText }}>
               <Plus className="h-4 w-4" />
             </Button>
           </div>
@@ -741,27 +923,31 @@ function DashHeader({
           {/* Politician selector */}
           {politician && (
             <div className="relative group">
-              <button className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[hsl(215,25%,18%)] hover:bg-[hsl(215,25%,22%)] transition-colors">
-                <span className="text-sm text-[hsl(210,40%,90%)]">{politician.nickname || politician.name.split(' ')[0]}</span>
+              <button className="flex items-center gap-2 px-3 py-1.5 rounded-lg transition-colors"
+                      style={{ backgroundColor: t.filterBg }}>
+                <span className="text-sm" style={{ color: `${t.brightText}ee` }}>{politician.nickname || politician.name.split(' ')[0]}</span>
                 {politician.party && (
-                  <Badge className="bg-[hsl(215,25%,25%)] text-[hsl(210,40%,80%)] border-[hsl(215,25%,30%)] text-[10px]">
+                  <Badge className="text-[10px]" style={{ backgroundColor: t.filterActive, color: `${t.brightText}cc`, borderColor: t.cardHoverBorder }}>
                     {politician.party}
                   </Badge>
                 )}
-                {politicians.length > 1 && <ChevronDown className="h-3 w-3 text-[hsl(215,15%,50%)]" />}
+                {politicians.length > 1 && <ChevronDown className="h-3 w-3" style={{ color: t.mutedText }} />}
               </button>
 
               {politicians.length > 1 && (
-                <div className="absolute right-0 top-full mt-1 bg-[hsl(215,25%,15%)] border border-[hsl(215,25%,25%)] rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 min-w-[180px]">
+                <div className="absolute right-0 top-full mt-1 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 min-w-[180px]"
+                     style={{ backgroundColor: t.tooltipBg, border: `1px solid ${t.tooltipBorder}` }}>
                   {politicians.map(p => (
                     <button
                       key={p.id}
                       onClick={() => onSelectPolitician(p.id)}
-                      className={`w-full text-left px-4 py-2 text-sm hover:bg-[hsl(215,25%,20%)] transition-colors first:rounded-t-lg last:rounded-b-lg ${
-                        p.id === politician.id ? 'text-[hsl(210,40%,70%)] bg-[hsl(215,25%,18%)]' : 'text-[hsl(215,15%,65%)]'
-                      }`}
+                      className="w-full text-left px-4 py-2 text-sm transition-colors first:rounded-t-lg last:rounded-b-lg"
+                      style={{
+                        color: p.id === politician.id ? t.accentText : t.bodyText,
+                        backgroundColor: p.id === politician.id ? t.filterBg : 'transparent'
+                      }}
                     >
-                      {p.name} {p.party && <span className="text-[hsl(215,15%,40%)] ml-1">({p.party})</span>}
+                      {p.name} {p.party && <span style={{ color: `${t.mutedText}88` }} className="ml-1">({p.party})</span>}
                     </button>
                   ))}
                 </div>
@@ -770,11 +956,9 @@ function DashHeader({
           )}
 
           {/* Logout */}
-          <Button
-            variant="ghost"
-            size="sm"
+          <Button variant="ghost" size="sm"
             onClick={async () => { await supabase.auth.signOut(); navigate('/login') }}
-            className="text-[hsl(215,15%,50%)] hover:text-[hsl(210,40%,98%)] hover:bg-[hsl(215,25%,18%)]"
+            style={{ color: t.mutedText }}
             title="Sair"
           >
             Sair
