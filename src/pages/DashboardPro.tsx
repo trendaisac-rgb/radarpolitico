@@ -426,6 +426,18 @@ export default function Dashboard() {
           />
         </div>
 
+        {/* AI Insights (Relatório Executivo) */}
+        <div className="mb-6">
+          <InsightsSection
+            sumario={aiAnalysis?.summary || (mentions.length > 0 ? generateInsights(score, stats?.total || 0, stats?.positive || 0, stats?.negative || 0, networkData).sumario : undefined)}
+            recomendacoes={aiAnalysis?.recommendations || (mentions.length > 0 ? generateInsights(score, stats?.total || 0, stats?.positive || 0, stats?.negative || 0, networkData).recomendacoes : undefined)}
+            risks={aiAnalysis?.risks}
+            opportunities={aiAnalysis?.opportunities}
+            isLoading={loadingAI}
+            isAIGenerated={!!aiAnalysis}
+          />
+        </div>
+
         {/* Network Cards (side by side) */}
         <div className="mb-6">
           <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
@@ -450,18 +462,6 @@ export default function Dashboard() {
               <NetworkCard rede="youtube" data={networkData.youtube} icon={networkIcons.youtube} />
             </div>
           )}
-        </div>
-
-        {/* AI Insights */}
-        <div className="mb-6">
-          <InsightsSection
-            sumario={aiAnalysis?.summary || (mentions.length > 0 ? generateInsights(score, stats?.total || 0, stats?.positive || 0, stats?.negative || 0, networkData).sumario : undefined)}
-            recomendacoes={aiAnalysis?.recommendations || (mentions.length > 0 ? generateInsights(score, stats?.total || 0, stats?.positive || 0, stats?.negative || 0, networkData).recomendacoes : undefined)}
-            risks={aiAnalysis?.risks}
-            opportunities={aiAnalysis?.opportunities}
-            isLoading={loadingAI}
-            isAIGenerated={!!aiAnalysis}
-          />
         </div>
 
         {/* Mentions List (compact) */}
