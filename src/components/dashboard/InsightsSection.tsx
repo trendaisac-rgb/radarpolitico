@@ -217,56 +217,77 @@ export function generateInsights(
   networks: Record<string, any>
 ): { sumario: string; recomendacoes: string[] } {
   const recomendacoes: string[] = []
+  const neutras = mencoes - positivas - negativas
+  const posPercent = mencoes > 0 ? Math.round((positivas / mencoes) * 100) : 0
+  const negPercent = mencoes > 0 ? Math.round((negativas / mencoes) * 100) : 0
+
+  // Resumo executivo completo (estilo analista político sênior)
   let sumario = ''
 
-  // Análise do score
+  if (mencoes === 0) {
+    sumario = `Não foram identificadas menções relevantes no período analisado. A ausência de cobertura pode indicar baixa exposição midiática — recomenda-se avaliar a estratégia de comunicação para garantir visibilidade adequada.`
+    recomendacoes.push('Considerar ações de assessoria de imprensa para gerar visibilidade na mídia')
+    recomendacoes.push('Avaliar oportunidades de posicionamento em temas de interesse público')
+    return { sumario, recomendacoes }
+  }
+
+  // Panorama
+  sumario = `PANORAMA: Foram registradas ${mencoes} menções no período — ${positivas} positivas (${posPercent}%), ${negativas} negativas (${negPercent}%) e ${neutras} neutras. `
+
+  // Score e imagem
   if (score >= 70) {
-    sumario = `Excelente performance! Seu score de imagem está em ${score} pontos, indicando uma percepção muito positiva na mídia e redes sociais.`
+    sumario += `O score de percepção pública está em ${score}/100, refletindo uma imagem fortalecida e cobertura predominantemente favorável. O capital político encontra-se em alta, com a narrativa midiática trabalhando a favor da imagem. `
   } else if (score >= 50) {
-    sumario = `Performance estável. Seu score de ${score} pontos indica uma imagem equilibrada, com oportunidades de melhoria.`
+    sumario += `O score de percepção está em ${score}/100, indicando estabilidade na imagem pública. A cobertura é equilibrada, sem grandes ameaças, porém também sem ganhos expressivos. Há espaço para ações proativas que elevem a percepção. `
   } else if (score >= 30) {
-    sumario = `Atenção necessária. O score de ${score} pontos sugere um momento delicado que requer ação estratégica.`
+    sumario += `O score de ${score}/100 indica desgaste na percepção pública. A predominância de cobertura crítica sinaliza vulnerabilidade que precisa ser endereçada com estratégia de comunicação direcionada. `
   } else {
-    sumario = `Situação crítica. Com score de ${score} pontos, é urgente implementar ações de recuperação de imagem.`
+    sumario += `ALERTA: O score de ${score}/100 indica situação crítica de imagem. A concentração de menções negativas representa risco significativo e demanda resposta coordenada e imediata da equipe de comunicação. `
   }
 
-  // Adiciona contexto de menções
-  const total = positivas + negativas + (mencoes - positivas - negativas)
-  if (mencoes > 0) {
-    const posPercent = Math.round((positivas / mencoes) * 100)
-    sumario += ` Foram registradas ${mencoes} menções, sendo ${posPercent}% positivas.`
+  // Análise por rede
+  const youtubeData = networks['youtube']
+  const midiaData = networks['midia']
+
+  if (midiaData && midiaData.mencoes > 0) {
+    sumario += `Na mídia tradicional, foram ${midiaData.mencoes} menções — acompanhar a evolução é essencial para antecipar tendências. `
+  }
+  if (youtubeData && youtubeData.mencoes > 0) {
+    const ytTom = youtubeData.sentimento_positivo > youtubeData.sentimento_negativo ? 'favorável' : youtubeData.sentimento_negativo > youtubeData.sentimento_positivo ? 'crítico' : 'equilibrado'
+    sumario += `No YouTube, ${youtubeData.mencoes} vídeos com tom predominantemente ${ytTom}. `
   }
 
-  // Recomendações baseadas na análise
+  // Recomendações estratégicas
   if (negativas > positivas) {
-    recomendacoes.push('Priorize responder às críticas mais relevantes de forma construtiva')
-    recomendacoes.push('Considere uma nota oficial esclarecendo pontos controversos')
+    recomendacoes.push('Priorizar gestão das menções negativas — avaliar necessidade de posicionamento público ou nota de esclarecimento')
+    recomendacoes.push('Mapear os veículos com cobertura mais crítica e preparar abordagem estratégica')
   }
 
   if (score < 50) {
-    recomendacoes.push('Aumente a presença em pautas positivas e realizações')
-    recomendacoes.push('Fortaleça a comunicação com a base de apoiadores')
+    recomendacoes.push('Intensificar ações de comunicação positiva — pautar realizações, projetos e resultados concretos')
+    recomendacoes.push('Fortalecer presença em canais próprios para construir narrativa favorável independente da mídia')
   }
 
-  // Análise por rede (V1: apenas Mídia + YouTube)
-  const youtubeData = networks['youtube']
+  if (score >= 70) {
+    recomendacoes.push('Capitalizar o momento favorável — lançar propostas, projetos ou posicionamentos estratégicos')
+    recomendacoes.push('Amplificar as menções positivas nos canais próprios como prova social')
+  }
+
   if (youtubeData && youtubeData.mencoes > 3) {
     if (youtubeData.sentimento_positivo > youtubeData.sentimento_negativo) {
-      recomendacoes.push('YouTube tem cobertura positiva - aproveite para amplificar o conteúdo')
+      recomendacoes.push('YouTube com tom favorável — aproveitar para produzir e amplificar conteúdo em vídeo')
     } else if (youtubeData.sentimento_negativo > youtubeData.sentimento_positivo) {
-      recomendacoes.push('Vídeos críticos detectados no YouTube - avalie necessidade de resposta')
+      recomendacoes.push('Vídeos com tom crítico detectados no YouTube — avaliar se requerem resposta ou monitoramento intensificado')
     }
   }
 
-  const midiaData = networks['midia']
   if (midiaData && midiaData.mencoes > 5) {
-    recomendacoes.push('Mídia ativa hoje - acompanhe a evolução das notícias')
+    recomendacoes.push('Cobertura midiática ativa — monitorar evolução ao longo do dia para antecipar desdobramentos')
   }
 
-  // Recomendação padrão se não houver outras
   if (recomendacoes.length === 0) {
-    recomendacoes.push('Continue monitorando diariamente para identificar tendências')
-    recomendacoes.push('Atualize os dados regularmente para ter insights precisos')
+    recomendacoes.push('Manter monitoramento diário para identificar tendências e oportunidades de posicionamento')
+    recomendacoes.push('Avaliar oportunidades de pauta para os próximos dias com base nos temas em evidência')
   }
 
   return { sumario, recomendacoes }
