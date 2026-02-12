@@ -275,3 +275,67 @@ ${negativeAlerts ? `⚠️ *Pontos de Atenção:*\n${negativeAlerts}\n` : ''}
 function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms))
 }
+
+/**
+ * Limpa todas as menções de um político
+ * Útil para remover dados antigos/falsos e começar do zero
+ */
+export async function clearMentions(politicianId: number): Promise<{ deleted: number; error?: string }> {
+  try {
+    // Primeiro conta quantas menções existem
+    const { count, error: countError } = await supabase
+      .from('mentions')
+      .select('*', { count: 'exact', head: true })
+      .eq('politician_id', politicianId)
+
+    if (countError) {
+      return { deleted: 0, error: countError.message }
+    }
+
+    // Deleta todas as menções do político
+    const { error } = await supabase
+      .from('mentions')
+      .delete()
+      .eq('politician_id', politicianId)
+
+    if (error) {
+      return { deleted: 0, error: error.message }
+    }
+
+    console.log(`🗑️ ${count || 0} menções deletadas para político ${politicianId}`)
+    return { deleted: count || 0 }
+  } catch (err) {
+    return { deleted: 0, error: String(err) }
+  }
+}
+
+/**
+ * Detecta se os dados parecem ser fake/demo
+ * Retorna true se detectar padrões de dados falsos
+ */
+export function detectFakeData(mentions: Array<{ title?: string; content?: string }>): boolean {
+  const fakePatterns = [
+    'se manifesta sobre medidas econômicas em entrevista exclusiva',
+    'comenta decisão do STF em suas redes sociais',
+    'participa de evento em Brasília e fala sobre agenda',
+    'articulam votação de projeto no Congresso',
+    'anuncia novos investimentos para infraestrutura',
+    'mostra avaliação de',
+    'recebe comitiva de prefeitos',
+    'defende reforma e critica oposição'
+  ]
+
+  let fakeCount = 0
+  for (const mention of mentions) {
+    const text = `${mention.title || ''} ${mention.content || ''}`.toLowerCase()
+    for (const pattern of fakePatterns) {
+      if (text.includes(pattern.toLowerCase())) {
+        fakeCount++
+        break
+      }
+    }
+  }
+
+  // Se mais de 30% das menções parecem fake, provavelmente são
+  return fakeCount > mentions.length * 0.3
+}
