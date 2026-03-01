@@ -47,8 +47,8 @@ export function Hero() {
                 size="lg"
                 className="bg-accent hover:bg-accent/90 text-accent-foreground text-lg px-8 py-6 shadow-lg shadow-accent/25"
               >
-                <a href={getWhatsAppUrl()} target="_blank" rel="noopener noreferrer">
-                  Começar Monitoramento
+                <a href="/login">
+                  Testar Grátis por 7 Dias
                   <ArrowRight className="w-5 h-5 ml-2" />
                 </a>
               </Button>

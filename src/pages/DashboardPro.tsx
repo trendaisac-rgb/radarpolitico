@@ -11,7 +11,8 @@ import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   BarChart3, Loader2, RefreshCw, Plus, FileDown, ChevronDown,
-  Brain, FileText, Lightbulb, CheckCircle2, Sparkles, AlertTriangle, TrendingUp as TrendingUpIcon, Palette
+  Brain, FileText, Lightbulb, CheckCircle2, Sparkles, AlertTriangle, TrendingUp as TrendingUpIcon, Palette,
+  Bell, Users, Settings
 } from 'lucide-react'
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -1057,14 +1058,23 @@ function DashHeader({
           {/* Action buttons */}
           <div className="hidden sm:flex items-center gap-2">
             <Button variant="ghost" size="sm" onClick={onRefresh} disabled={isRefreshing}
-              style={{ color: t.bodyText }}>
+              style={{ color: t.bodyText }} title="Atualizar dados">
               {isRefreshing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
             </Button>
-            <Button variant="ghost" size="sm" onClick={onOpenReport} style={{ color: t.bodyText }}>
+            <Button variant="ghost" size="sm" onClick={onOpenReport} style={{ color: t.bodyText }} title="Relatório">
               <FileDown className="h-4 w-4" />
             </Button>
-            <Button variant="ghost" size="sm" onClick={onAddPolitician} style={{ color: t.bodyText }}>
+            <Button variant="ghost" size="sm" onClick={() => navigate('/competitors')} style={{ color: t.bodyText }} title="Comparativo">
+              <Users className="h-4 w-4" />
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => navigate('/alerts')} style={{ color: t.bodyText }} title="Alertas">
+              <Bell className="h-4 w-4" />
+            </Button>
+            <Button variant="ghost" size="sm" onClick={onAddPolitician} style={{ color: t.bodyText }} title="Adicionar político">
               <Plus className="h-4 w-4" />
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => navigate('/settings')} style={{ color: t.bodyText }} title="Configurações">
+              <Settings className="h-4 w-4" />
             </Button>
           </div>
 

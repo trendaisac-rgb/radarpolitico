@@ -7,6 +7,9 @@ import Index from "./pages/Index";
 import Login from "./pages/Login";
 import DashboardPro from "./pages/DashboardPro";
 import AddPolitician from "./pages/AddPolitician";
+import Competitors from "./pages/Competitors";
+import Alerts from "./pages/Alerts";
+import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -22,6 +25,9 @@ const App = () => (
           <Route path="/login" element={<Login />} />
           <Route path="/dashboard" element={<DashboardPro />} />
           <Route path="/add-politician" element={<AddPolitician />} />
+          <Route path="/competitors" element={<Competitors />} />
+          <Route path="/alerts" element={<Alerts />} />
+          <Route path="/settings" element={<Settings />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

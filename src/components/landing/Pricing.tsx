@@ -5,45 +5,48 @@ import { getWhatsAppUrl } from "@/lib/constants";
 
 const plans = [
   {
-    name: "Básico",
-    price: "297",
-    description: "Para candidatos que estão começando",
+    name: "Starter",
+    price: "199",
+    description: "Para vereadores e candidatos",
     features: [
       "1 político monitorado",
-      "Relatório diário no WhatsApp",
-      "Análise de sentimento",
-      "Alertas de crise",
-      "Suporte por email",
+      "Relatório diário por IA (WhatsApp)",
+      "Análise de sentimento automática",
+      "Alertas de crise em tempo real",
+      "Score de reputação diário",
+      "Monitoramento: Mídia + YouTube",
     ],
-    cta: "Começar Agora",
+    cta: "Começar com R$199",
     popular: false,
   },
   {
-    name: "Profissional",
-    price: "597",
-    description: "Para campanhas competitivas",
+    name: "Pro",
+    price: "399",
+    description: "Para deputados e campanhas competitivas",
     features: [
-      "Tudo do Básico +",
-      "1 político + 2 adversários",
-      "Relatório 2x ao dia (8h e 18h)",
-      "Análise comparativa",
-      "Suporte prioritário WhatsApp",
-      "Histórico de 30 dias",
+      "Tudo do Starter +",
+      "3 políticos + comparativo de adversários",
+      "Relatório 2x ao dia (manhã e noite)",
+      "Radar de redes sociais completo",
+      "Análise comparativa com adversários",
+      "Exportação PDF + WhatsApp",
+      "Histórico de 90 dias",
     ],
     cta: "Escolher Pro",
     popular: true,
   },
   {
-    name: "Assessoria",
-    price: "997",
-    description: "Para assessorias e partidos",
+    name: "Gabinete",
+    price: "799",
+    description: "Para assessorias e partidos políticos",
     features: [
-      "Tudo do Profissional +",
-      "Até 5 políticos monitorados",
-      "Alertas em tempo real",
-      "Relatório semanal detalhado",
-      "Reunião mensal de estratégia",
-      "Acesso a API (em breve)",
+      "Tudo do Pro +",
+      "Até 10 políticos monitorados",
+      "Alertas de crise prioritários",
+      "Relatórios semanais estratégicos",
+      "Suporte dedicado via WhatsApp",
+      "Dashboard multi-usuário",
+      "API de integração",
     ],
     cta: "Falar com Consultor",
     popular: false,
@@ -129,7 +132,7 @@ export function Pricing() {
                 }`}
                 size="lg"
               >
-                <a href={getWhatsAppUrl()} target="_blank" rel="noopener noreferrer">
+                <a href="/login">
                   {plan.cta}
                 </a>
               </Button>

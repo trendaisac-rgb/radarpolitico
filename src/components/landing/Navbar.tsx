@@ -72,8 +72,8 @@ export function Navbar() {
               asChild
               className="bg-accent hover:bg-accent/90 text-accent-foreground"
             >
-              <a href={getWhatsAppUrl()} target="_blank" rel="noopener noreferrer">
-                Começar Agora
+              <a href="/login">
+                Teste Grátis
               </a>
             </Button>
           </div>
@@ -134,8 +134,8 @@ export function Navbar() {
                 asChild
                 className="bg-accent hover:bg-accent/90 text-accent-foreground w-full"
               >
-                <a href={getWhatsAppUrl()} target="_blank" rel="noopener noreferrer">
-                  Começar Agora
+                <a href="/login">
+                  Teste Grátis
                 </a>
               </Button>
             </div>
