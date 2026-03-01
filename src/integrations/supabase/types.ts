@@ -18,10 +18,12 @@ export type Database = {
         Row: {
           created_at: string | null
           description: string | null
-          id: number
-          mention_id: number | null
-          politician_id: number
-          priority: Database["public"]["Enums"]["alert_priority"] | null
+          id: string
+          mention_id: string | null
+          politician_id: string
+          priority: string | null
+          alert_type: string | null
+          is_read: boolean | null
           sent_at: string | null
           sent_email: boolean | null
           sent_whatsapp: boolean | null
@@ -30,10 +32,12 @@ export type Database = {
         Insert: {
           created_at?: string | null
           description?: string | null
-          id?: number
-          mention_id?: number | null
-          politician_id: number
-          priority?: Database["public"]["Enums"]["alert_priority"] | null
+          id?: string
+          mention_id?: string | null
+          politician_id: string
+          priority?: string | null
+          alert_type?: string | null
+          is_read?: boolean | null
           sent_at?: string | null
           sent_email?: boolean | null
           sent_whatsapp?: boolean | null
@@ -42,10 +46,12 @@ export type Database = {
         Update: {
           created_at?: string | null
           description?: string | null
-          id?: number
-          mention_id?: number | null
-          politician_id?: number
-          priority?: Database["public"]["Enums"]["alert_priority"] | null
+          id?: string
+          mention_id?: string | null
+          politician_id?: string
+          priority?: string | null
+          alert_type?: string | null
+          is_read?: boolean | null
           sent_at?: string | null
           sent_email?: boolean | null
           sent_whatsapp?: boolean | null
@@ -68,54 +74,105 @@ export type Database = {
           },
         ]
       }
+      competitors: {
+        Row: {
+          id: string
+          politician_id: string
+          competitor_politician_id: string
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          politician_id: string
+          competitor_politician_id: string
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          politician_id?: string
+          competitor_politician_id?: string
+          created_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "competitors_politician_id_fkey"
+            columns: ["politician_id"]
+            isOneToOne: false
+            referencedRelation: "politicians"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "competitors_competitor_politician_id_fkey"
+            columns: ["competitor_politician_id"]
+            isOneToOne: false
+            referencedRelation: "politicians"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       daily_reports: {
         Row: {
           created_at: string | null
           highlights: Json | null
-          id: number
+          id: string
           mention_count: number | null
           negative_count: number | null
           neutral_count: number | null
-          politician_id: number
+          politician_id: string
           positive_count: number | null
           report_date: string
           sent_at: string | null
           sent_email: boolean | null
           sent_whatsapp: boolean | null
-          sentiment_overview: Json | null
           summary: string | null
+          risks: Json | null
+          opportunities: Json | null
+          dominant_narrative: string | null
+          alert_level: string | null
+          score: number | null
+          score_breakdown: Json | null
         }
         Insert: {
           created_at?: string | null
           highlights?: Json | null
-          id?: number
+          id?: string
           mention_count?: number | null
           negative_count?: number | null
           neutral_count?: number | null
-          politician_id: number
+          politician_id: string
           positive_count?: number | null
           report_date: string
           sent_at?: string | null
           sent_email?: boolean | null
           sent_whatsapp?: boolean | null
-          sentiment_overview?: Json | null
           summary?: string | null
+          risks?: Json | null
+          opportunities?: Json | null
+          dominant_narrative?: string | null
+          alert_level?: string | null
+          score?: number | null
+          score_breakdown?: Json | null
         }
         Update: {
           created_at?: string | null
           highlights?: Json | null
-          id?: number
+          id?: string
           mention_count?: number | null
           negative_count?: number | null
           neutral_count?: number | null
-          politician_id?: number
+          politician_id?: string
           positive_count?: number | null
           report_date?: string
           sent_at?: string | null
           sent_email?: boolean | null
           sent_whatsapp?: boolean | null
-          sentiment_overview?: Json | null
           summary?: string | null
+          risks?: Json | null
+          opportunities?: Json | null
+          dominant_narrative?: string | null
+          alert_level?: string | null
+          score?: number | null
+          score_breakdown?: Json | null
         }
         Relationships: [
           {
@@ -132,64 +189,67 @@ export type Database = {
           content: string | null
           content_hash: string
           created_at: string | null
-          entities: Json | null
-          id: number
+          id: string
           is_alerted: boolean | null
           is_processed: boolean | null
-          politician_id: number
+          politician_id: string
           published_at: string | null
           relevance_score: number | null
-          scraped_at: string | null
-          sentiment: Database["public"]["Enums"]["sentiment_type"] | null
+          sentiment: string | null
           sentiment_score: number | null
           source_name: string | null
-          source_type: Database["public"]["Enums"]["source_type"] | null
+          source_type: string | null
+          source_logo_url: string | null
           summary: string | null
           title: string | null
           topics: string[] | null
           url: string
+          views_count: number | null
+          engagement_count: number | null
         }
         Insert: {
           content?: string | null
           content_hash: string
           created_at?: string | null
-          entities?: Json | null
-          id?: number
+          id?: string
           is_alerted?: boolean | null
           is_processed?: boolean | null
-          politician_id: number
+          politician_id: string
           published_at?: string | null
           relevance_score?: number | null
-          scraped_at?: string | null
-          sentiment?: Database["public"]["Enums"]["sentiment_type"] | null
+          sentiment?: string | null
           sentiment_score?: number | null
           source_name?: string | null
-          source_type?: Database["public"]["Enums"]["source_type"] | null
+          source_type?: string | null
+          source_logo_url?: string | null
           summary?: string | null
           title?: string | null
           topics?: string[] | null
           url: string
+          views_count?: number | null
+          engagement_count?: number | null
         }
         Update: {
           content?: string | null
           content_hash?: string
           created_at?: string | null
-          entities?: Json | null
-          id?: number
+          id?: string
           is_alerted?: boolean | null
           is_processed?: boolean | null
-          politician_id?: number
+          politician_id?: string
           published_at?: string | null
           relevance_score?: number | null
-          scraped_at?: string | null
-          sentiment?: Database["public"]["Enums"]["sentiment_type"] | null
+          sentiment?: string | null
           sentiment_score?: number | null
           source_name?: string | null
-          source_type?: Database["public"]["Enums"]["source_type"] | null
+          source_type?: string | null
+          source_logo_url?: string | null
           summary?: string | null
           title?: string | null
           topics?: string[] | null
           url?: string
+          views_count?: number | null
+          engagement_count?: number | null
         }
         Relationships: [
           {
@@ -201,52 +261,72 @@ export type Database = {
           },
         ]
       }
-      news_sources: {
+      network_metrics: {
         Row: {
-          base_url: string
+          id: string
+          politician_id: string
+          network: string
+          date: string
+          mention_count: number | null
+          positive_count: number | null
+          negative_count: number | null
+          neutral_count: number | null
+          avg_sentiment: number | null
+          total_reach: number | null
+          top_mention_id: string | null
           created_at: string | null
-          id: number
-          is_active: boolean | null
-          last_scraped_at: string | null
-          name: string
-          rate_limit_seconds: number | null
-          requires_selenium: boolean | null
-          search_url_template: string | null
-          source_type: Database["public"]["Enums"]["source_type"] | null
         }
         Insert: {
-          base_url: string
+          id?: string
+          politician_id: string
+          network: string
+          date: string
+          mention_count?: number | null
+          positive_count?: number | null
+          negative_count?: number | null
+          neutral_count?: number | null
+          avg_sentiment?: number | null
+          total_reach?: number | null
+          top_mention_id?: string | null
           created_at?: string | null
-          id?: number
-          is_active?: boolean | null
-          last_scraped_at?: string | null
-          name: string
-          rate_limit_seconds?: number | null
-          requires_selenium?: boolean | null
-          search_url_template?: string | null
-          source_type?: Database["public"]["Enums"]["source_type"] | null
         }
         Update: {
-          base_url?: string
+          id?: string
+          politician_id?: string
+          network?: string
+          date?: string
+          mention_count?: number | null
+          positive_count?: number | null
+          negative_count?: number | null
+          neutral_count?: number | null
+          avg_sentiment?: number | null
+          total_reach?: number | null
+          top_mention_id?: string | null
           created_at?: string | null
-          id?: number
-          is_active?: boolean | null
-          last_scraped_at?: string | null
-          name?: string
-          rate_limit_seconds?: number | null
-          requires_selenium?: boolean | null
-          search_url_template?: string | null
-          source_type?: Database["public"]["Enums"]["source_type"] | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "network_metrics_politician_id_fkey"
+            columns: ["politician_id"]
+            isOneToOne: false
+            referencedRelation: "politicians"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "network_metrics_top_mention_id_fkey"
+            columns: ["top_mention_id"]
+            isOneToOne: false
+            referencedRelation: "mentions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       politicians: {
         Row: {
           city: string | null
-          competitors: number[] | null
           created_at: string | null
           email: string | null
-          id: number
+          id: string
           is_active: boolean | null
           keywords: string[] | null
           name: string
@@ -260,13 +340,13 @@ export type Database = {
           updated_at: string | null
           user_id: string
           whatsapp: string | null
+          photo_url: string | null
         }
         Insert: {
           city?: string | null
-          competitors?: number[] | null
           created_at?: string | null
           email?: string | null
-          id?: number
+          id?: string
           is_active?: boolean | null
           keywords?: string[] | null
           name: string
@@ -280,13 +360,13 @@ export type Database = {
           updated_at?: string | null
           user_id: string
           whatsapp?: string | null
+          photo_url?: string | null
         }
         Update: {
           city?: string | null
-          competitors?: number[] | null
           created_at?: string | null
           email?: string | null
-          id?: number
+          id?: string
           is_active?: boolean | null
           keywords?: string[] | null
           name?: string
@@ -300,8 +380,114 @@ export type Database = {
           updated_at?: string | null
           user_id?: string
           whatsapp?: string | null
+          photo_url?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "politicians_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscriptions: {
+        Row: {
+          id: string
+          user_id: string
+          plan: string
+          status: string
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
+          max_politicians: number | null
+          trial_ends_at: string | null
+          current_period_start: string | null
+          current_period_end: string | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          plan?: string
+          status?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          max_politicians?: number | null
+          trial_ends_at?: string | null
+          current_period_start?: string | null
+          current_period_end?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          plan?: string
+          status?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          max_politicians?: number | null
+          trial_ends_at?: string | null
+          current_period_start?: string | null
+          current_period_end?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscriptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_settings: {
+        Row: {
+          id: string
+          user_id: string
+          theme: string | null
+          language: string | null
+          timezone: string | null
+          daily_report_hour: number | null
+          whatsapp_number: string | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          theme?: string | null
+          language?: string | null
+          timezone?: string | null
+          daily_report_hour?: number | null
+          whatsapp_number?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          theme?: string | null
+          language?: string | null
+          timezone?: string | null
+          daily_report_hour?: number | null
+          whatsapp_number?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_settings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
@@ -312,15 +498,16 @@ export type Database = {
     }
     Enums: {
       alert_priority: "low" | "medium" | "high" | "critical"
+      alert_type: "mention" | "trend" | "crisis" | "opportunity"
       sentiment_type: "positivo" | "negativo" | "neutro"
       source_type:
         | "news"
+        | "youtube"
         | "twitter"
         | "instagram"
-        | "facebook"
+        | "tiktok"
+        | "telegram"
         | "diario_oficial"
-        | "tse"
-        | "other"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -449,15 +636,16 @@ export const Constants = {
   public: {
     Enums: {
       alert_priority: ["low", "medium", "high", "critical"],
+      alert_type: ["mention", "trend", "crisis", "opportunity"],
       sentiment_type: ["positivo", "negativo", "neutro"],
       source_type: [
         "news",
+        "youtube",
         "twitter",
         "instagram",
-        "facebook",
+        "tiktok",
+        "telegram",
         "diario_oficial",
-        "tse",
-        "other",
       ],
     },
   },
