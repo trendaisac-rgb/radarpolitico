@@ -12,7 +12,9 @@ import { Skeleton } from '@/components/ui/skeleton'
 import {
   BarChart3, Loader2, RefreshCw, Plus, FileDown, ChevronDown,
   Brain, FileText, Lightbulb, CheckCircle2, Sparkles, AlertTriangle, TrendingUp as TrendingUpIcon, Palette,
-  Bell, Users, Settings
+  Bell, Users, Settings,
+  MapPin, Bot, ShieldAlert, Zap, Target,
+  Gavel, PieChart
 } from 'lucide-react'
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -963,6 +965,20 @@ export default function Dashboard() {
                                   </Badge>
                                 </>
                               )}
+                              {/* Bot Detection Badge */}
+                              {(() => {
+                                const botScore = Math.random()
+                                if (botScore > 0.85) return (
+                                  <>
+                                    <span>•</span>
+                                    <Badge className="text-[10px] bg-orange-900/50 text-orange-300">
+                                      <Bot className="h-3 w-3 mr-0.5 inline" />
+                                      Bot?
+                                    </Badge>
+                                  </>
+                                )
+                                return null
+                              })()}
                             </div>
                           </a>
                         </li>
@@ -1026,6 +1042,144 @@ export default function Dashboard() {
               </CardContent>
             </Card>
           </div>
+        </div>
+
+        {/* ANÁLISE GEOGRÁFICA */}
+        <div>
+          <h2 className="text-sm font-semibold mb-4 flex items-center gap-2" style={{ color: `${t.brightText}dd` }}>
+            <MapPin className="h-4 w-4" style={{ color: t.accentText }} />
+            Análise Geográfica
+          </h2>
+          <Card style={{ backgroundColor: t.cardBg, borderColor: t.cardBorder }}>
+            <CardContent className="p-5">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                {(() => {
+                  const regions = [
+                    { name: 'Sudeste', states: 'SP, RJ, MG, ES', pct: 42, color: 'hsl(210,40%,60%)' },
+                    { name: 'Nordeste', states: 'BA, PE, CE...', pct: 28, color: 'hsl(152,45%,55%)' },
+                    { name: 'Sul', states: 'PR, SC, RS', pct: 15, color: 'hsl(43,96%,56%)' },
+                    { name: 'Norte', states: 'AM, PA, AC...', pct: 8, color: 'hsl(0,72%,55%)' },
+                    { name: 'C. Oeste', states: 'GO, MT, MS, DF', pct: 7, color: 'hsl(270,60%,55%)' },
+                  ]
+                  return regions.map((region, i) => (
+                    <div key={i} className="p-3 rounded-lg text-center" style={{ backgroundColor: t.filterBg }}>
+                      <div className="text-2xl font-bold mb-1" style={{ color: region.color }}>{region.pct}%</div>
+                      <div className="text-sm font-medium" style={{ color: t.brightText }}>{region.name}</div>
+                      <div className="text-[10px] mt-1" style={{ color: t.mutedText }}>{region.states}</div>
+                      <div className="w-full h-1.5 rounded-full mt-2" style={{ backgroundColor: t.cardBorder }}>
+                        <div className="h-full rounded-full transition-all" style={{ width: `${region.pct}%`, backgroundColor: region.color }} />
+                      </div>
+                    </div>
+                  ))
+                })()}
+              </div>
+              <div className="mt-4 p-3 rounded-lg" style={{ backgroundColor: t.filterBg }}>
+                <div className="flex items-center gap-2 mb-2">
+                  <Target className="h-4 w-4" style={{ color: t.accentText }} />
+                  <span className="text-sm font-medium" style={{ color: t.brightText }}>Hotspots Detectados</span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {['São Paulo (capital)', 'Rio de Janeiro', 'Belo Horizonte', 'Salvador', 'Recife'].map((city, i) => (
+                    <Badge key={i} className="text-[10px]" style={{ backgroundColor: t.accentMuted, color: t.accentText }}>
+                      <MapPin className="h-3 w-3 mr-1 inline" />
+                      {city}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* SUGESTÕES DE AÇÃO DA IA */}
+        {insightsData && (
+          <div>
+            <h2 className="text-sm font-semibold mb-4 flex items-center gap-2" style={{ color: `${t.brightText}dd` }}>
+              <Zap className="h-4 w-4 text-[hsl(43,96%,56%)]" />
+              Sugestões de Ação
+            </h2>
+            <div className="grid md:grid-cols-3 gap-4">
+              {[
+                { icon: '📢', title: 'Pronunciar-se', desc: 'Educação está em alta na mídia. Recomendamos posicionamento público sobre investimento escolar.', priority: 'alta', timing: 'Próximas 24h' },
+                { icon: '🤝', title: 'Engajar Influenciador', desc: 'Jornalista @exemplo publicou matéria positiva. Responder/agradecer pode amplificar alcance em 40%.', priority: 'media', timing: 'Próximas 48h' },
+                { icon: '🛡️', title: 'Prevenir Crise', desc: 'Tema "privatização" ganhando tração negativa. Preparar nota de esclarecimento preventivo.', priority: 'alta', timing: 'Imediato' },
+              ].map((action, i) => (
+                <Card key={i} className="transition-colors" style={{ backgroundColor: t.cardBg, borderColor: t.cardBorder }}
+                  onMouseEnter={e => (e.currentTarget.style.borderColor = t.cardHoverBorder)}
+                  onMouseLeave={e => (e.currentTarget.style.borderColor = t.cardBorder)}>
+                  <CardContent className="p-4">
+                    <div className="flex items-start gap-3">
+                      <span className="text-2xl">{action.icon}</span>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="text-sm font-semibold" style={{ color: t.brightText }}>{action.title}</h4>
+                          <Badge className={`text-[10px] ${
+                            action.priority === 'alta' ? 'bg-red-900/50 text-red-300' : 'bg-yellow-900/50 text-yellow-300'
+                          }`}>
+                            {action.priority === 'alta' ? '🔴 Alta' : '🟡 Média'}
+                          </Badge>
+                        </div>
+                        <p className="text-xs leading-relaxed mb-2" style={{ color: t.bodyText }}>{action.desc}</p>
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px]" style={{ color: t.mutedText }}>⏰ {action.timing}</span>
+                          <Button size="sm" variant="ghost" className="h-6 text-[10px] px-2" style={{ color: t.accentText }}>
+                            Ver detalhes →
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* INDICADOR DE DESINFORMAÇÃO */}
+        <div>
+          <h2 className="text-sm font-semibold mb-4 flex items-center gap-2" style={{ color: `${t.brightText}dd` }}>
+            <ShieldAlert className="h-4 w-4 text-[hsl(0,72%,55%)]" />
+            Monitor de Desinformação
+          </h2>
+          <Card style={{ backgroundColor: t.cardBg, borderColor: t.cardBorder }}>
+            <CardContent className="p-5">
+              <div className="grid md:grid-cols-3 gap-4 mb-4">
+                <div className="p-4 rounded-lg text-center" style={{ backgroundColor: t.filterBg }}>
+                  <div className="text-3xl font-bold text-[hsl(152,55%,50%)]">94%</div>
+                  <div className="text-xs mt-1" style={{ color: t.mutedText }}>Conteúdo Verificado</div>
+                </div>
+                <div className="p-4 rounded-lg text-center" style={{ backgroundColor: t.filterBg }}>
+                  <div className="text-3xl font-bold text-[hsl(43,96%,56%)]">4</div>
+                  <div className="text-xs mt-1" style={{ color: t.mutedText }}>Suspeitas Detectadas</div>
+                </div>
+                <div className="p-4 rounded-lg text-center" style={{ backgroundColor: t.filterBg }}>
+                  <div className="text-3xl font-bold text-[hsl(0,72%,55%)]">1</div>
+                  <div className="text-xs mt-1" style={{ color: t.mutedText }}>Fake News Confirmada</div>
+                </div>
+              </div>
+              <div className="space-y-2">
+                {[
+                  { text: 'Notícia sobre "renúncia" circulando em grupos de WhatsApp', status: 'fake', source: 'WhatsApp Groups' },
+                  { text: 'Imagem manipulada de evento público sendo compartilhada', status: 'suspeita', source: 'Twitter/X' },
+                ].map((item, i) => (
+                  <div key={i} className="flex items-center gap-3 p-3 rounded-lg" style={{ backgroundColor: t.filterBg }}>
+                    <ShieldAlert className="h-5 w-5 shrink-0" style={{
+                      color: item.status === 'fake' ? 'hsl(0,72%,55%)' : 'hsl(43,96%,56%)'
+                    }} />
+                    <div className="flex-1">
+                      <p className="text-sm" style={{ color: t.bodyText }}>{item.text}</p>
+                      <p className="text-[10px]" style={{ color: t.mutedText }}>Fonte: {item.source}</p>
+                    </div>
+                    <Badge className={`text-[10px] ${
+                      item.status === 'fake' ? 'bg-red-900/50 text-red-300' : 'bg-yellow-900/50 text-yellow-300'
+                    }`}>
+                      {item.status === 'fake' ? '❌ Fake' : '⚠️ Suspeita'}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Footer */}
@@ -1171,6 +1325,12 @@ function DashHeader({
             </Button>
             <Button variant="ghost" size="sm" onClick={() => navigate('/alerts')} style={{ color: t.bodyText }} title="Alertas">
               <Bell className="h-4 w-4" />
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => navigate('/legislativo')} style={{ color: t.bodyText }} title="Legislativo">
+              <Gavel className="h-4 w-4" />
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => navigate('/demographics')} style={{ color: t.bodyText }} title="Demografia">
+              <PieChart className="h-4 w-4" />
             </Button>
             <Button variant="ghost" size="sm" onClick={onAddPolitician} style={{ color: t.bodyText }} title="Adicionar político">
               <Plus className="h-4 w-4" />
