@@ -375,7 +375,7 @@ export default function Dashboard() {
 
   // AI Analysis
   const runAIAnalysis = async () => {
-    if (!currentPolitician || mentions.length === 0) return
+    if (!currentPolitician || (mentions.length === 0 && (!socialResults.youtube?.posts?.length))) return
     setLoadingAI(true)
     try {
       const createNetworkData = (name: string, results: typeof socialResults.youtube) => ({
@@ -414,13 +414,14 @@ export default function Dashboard() {
 
   // Auto-run AI
   useEffect(() => {
-    if (mentions.length > 0 && !loadingMentions && !loadingSocial) {
+    const hasYouTubeData = socialResults.youtube?.posts && socialResults.youtube.posts.length > 0
+    if ((mentions.length > 0 || hasYouTubeData) && !loadingMentions && !loadingSocial) {
       const timer = setTimeout(() => {
         if (!aiAnalysis && !loadingAI) runAIAnalysis()
       }, 1000)
       return () => clearTimeout(timer)
     }
-  }, [mentions.length, loadingMentions, loadingSocial])
+  }, [mentions.length, loadingMentions, loadingSocial, socialResults])
 
   // Monitoring
   const handleRunMonitoring = async () => {
@@ -450,7 +451,7 @@ export default function Dashboard() {
     })) || []
   })
 
-  const hasRealMentions = mentions.length > 0
+  const hasRealMentions = mentions.length > 0 || (socialResults.youtube?.posts?.length || 0) > 0
   const score = hasRealMentions ? scoreResult.score : 64 // Demo score when no data
   const score10 = (score / 10).toFixed(1)
   const scoreHistory = generateScoreHistory(mentions, chartPeriod)
@@ -675,25 +676,69 @@ export default function Dashboard() {
 
         {/* OVERVIEW STATS ROW */}
         {(() => {
-          const totalMencoes = mentions.length || 47
-          const posCount = mentions.filter(m => m.sentiment === 'positivo').length || 22
-          const negCount = mentions.filter(m => m.sentiment === 'negativo').length || 8
-          const neuCount = mentions.filter(m => m.sentiment === 'neutro').length || 17
-          const alcanceEstimado = totalMencoes * 12400
-          const fontesUnicas = new Set(mentions.map(m => m.source_name)).size || 14
+          // Fixed calculation: separate mentions and YouTube data
+          const totalMencoes = mentions.length > 0 ? mentions.length : 0
+          const posCount = mentions.filter(m => m.sentiment === 'positivo').length
+          const negCount = mentions.filter(m => m.sentiment === 'negativo').length
+
+          // Include YouTube data
+          const ytPosts = socialResults?.youtube?.posts || []
+          const ytTotal = ytPosts.length
+          const ytPos = ytPosts.filter(p => p.sentiment === 'positivo').length
+          const ytNeg = ytPosts.filter(p => p.sentiment === 'negativo').length
+
+          // Combined totals
+          const combinedTotal = totalMencoes + ytTotal
+          const combinedPos = posCount + ytPos
+          const combinedNeg = negCount + ytNeg
+          const combinedNeu = combinedTotal - combinedPos - combinedNeg
+
+          // Estimated reach: news (12,400 avg readers) + YouTube views
+          const alcanceEstimado = (totalMencoes * 12400) + ytPosts.reduce((sum, p) => sum + (p.views || 0), 0)
+
+          // Unique sources: news sources + YouTube channels
+          const fontesUnicas = new Set([...mentions.map(m => m.source_name), ...ytPosts.map(p => p.author)].filter(Boolean)).size
+
           return (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {[
-                { label: 'Total de Menções', value: totalMencoes.toLocaleString('pt-BR'), icon: '📊', color: t.accentText },
-                { label: 'Sentimento Positivo', value: `${totalMencoes > 0 ? Math.round((posCount / totalMencoes) * 100) : 47}%`, icon: '🟢', color: 'hsl(152,55%,50%)' },
-                { label: 'Alcance Estimado', value: alcanceEstimado >= 1000000 ? `${(alcanceEstimado / 1000000).toFixed(1)}M` : alcanceEstimado >= 1000 ? `${(alcanceEstimado / 1000).toFixed(0)}K` : String(alcanceEstimado), icon: '👁️', color: 'hsl(210,60%,60%)' },
-                { label: 'Fontes Monitoradas', value: String(fontesUnicas), icon: '📡', color: 'hsl(43,96%,56%)' },
+                {
+                  label: 'Total de Menções',
+                  value: combinedTotal > 0 ? combinedTotal.toLocaleString('pt-BR') : '—',
+                  icon: '📊',
+                  color: t.accentText,
+                  title: 'Soma de notícias de portais (Google News) + vídeos do YouTube encontrados sobre o político'
+                },
+                {
+                  label: 'Sentimento Positivo',
+                  value: `${combinedTotal > 0 ? Math.round((combinedPos / combinedTotal) * 100) : 0}%`,
+                  icon: '🟢',
+                  color: 'hsl(152,55%,50%)',
+                  title: 'Percentual de menções com tom favorável. Calculado por análise de palavras-chave nos títulos e conteúdos'
+                },
+                {
+                  label: 'Alcance Estimado',
+                  value: combinedTotal > 0 ? (alcanceEstimado >= 1000000 ? `${(alcanceEstimado / 1000000).toFixed(1)}M` : alcanceEstimado >= 1000 ? `${(alcanceEstimado / 1000).toFixed(0)}K` : String(alcanceEstimado)) : '—',
+                  icon: '👁️',
+                  color: 'hsl(210,60%,60%)',
+                  title: 'Estimativa de pessoas impactadas. Notícias × 12.400 (média de leitores) + views reais do YouTube'
+                },
+                {
+                  label: 'Fontes Monitoradas',
+                  value: combinedTotal > 0 ? String(fontesUnicas) : '—',
+                  icon: '📡',
+                  color: 'hsl(43,96%,56%)',
+                  title: 'Número de veículos e canais diferentes que mencionaram o político'
+                },
               ].map((stat, i) => (
-                <Card key={i} style={{ backgroundColor: t.cardBg, borderColor: t.cardBorder }}>
+                <Card key={i} style={{ backgroundColor: t.cardBg, borderColor: t.cardBorder }} title={stat.title}>
                   <CardContent className="p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="text-lg">{stat.icon}</span>
-                      <span className="text-xs uppercase tracking-wider" style={{ color: t.mutedText }}>{stat.label}</span>
+                    <div className="flex items-center justify-between gap-2 mb-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">{stat.icon}</span>
+                        <span className="text-xs uppercase tracking-wider" style={{ color: t.mutedText }}>{stat.label}</span>
+                      </div>
+                      <span className="text-sm" style={{ color: t.mutedText }}>ℹ️</span>
                     </div>
                     <div className="text-3xl font-bold" style={{ color: stat.color }}>{stat.value}</div>
                   </CardContent>
@@ -783,8 +828,9 @@ export default function Dashboard() {
 
         {/* PERFORMANCE POR REDE */}
         <div>
-          <h2 className="text-sm font-semibold mb-4 flex items-center gap-2" style={{ color: `${t.brightText}dd` }}>
+          <h2 className="text-sm font-semibold mb-4 flex items-center gap-2" style={{ color: `${t.brightText}dd` }} title="Performance e métricas de sentimento em cada canal monitorado">
             📊 Performance por Canal
+            <span className="text-xs cursor-help" style={{ color: t.mutedText }}>ℹ️</span>
             <span className="font-normal" style={{ color: t.mutedText }}>— {todayStr}</span>
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -856,8 +902,9 @@ export default function Dashboard() {
 
         {/* ANÁLISE & RECOMENDAÇÕES */}
         <div>
-          <h2 className="text-sm font-semibold mb-4 flex items-center gap-2" style={{ color: `${t.brightText}dd` }}>
+          <h2 className="text-sm font-semibold mb-4 flex items-center gap-2" style={{ color: `${t.brightText}dd` }} title="Análise inteligente gerada por IA com base em todos os dados coletados">
             🧠 Análise & Recomendações
+            <span className="text-xs cursor-help" style={{ color: t.mutedText }}>ℹ️</span>
           </h2>
 
           {loadingAI ? (
@@ -1285,6 +1332,9 @@ export default function Dashboard() {
                     </Badge>
                   ))}
                 </div>
+              </div>
+              <div className="mt-3 p-2 rounded-lg text-[11px]" style={{ backgroundColor: t.accentMuted, color: t.accentText }}>
+                📊 Dados agregados de múltiplas pesquisas eleitorais e demográficas
               </div>
             </CardContent>
           </Card>

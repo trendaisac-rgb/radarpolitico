@@ -454,29 +454,22 @@ export async function searchAllNetworks(query: string): Promise<Record<string, S
 
   const startTime = Date.now()
 
-  const results = await Promise.all([
-    searchYouTube(query, 10),
-    searchTwitter(query, 10),
-    searchInstagram(query, 10),
-    searchTikTok(query, 10)
-  ])
+  // Only search YouTube - faster and more relevant for political monitoring
+  const youtubeResult = await searchYouTube(query, 10)
 
   const elapsed = ((Date.now() - startTime) / 1000).toFixed(1)
 
   console.log(`\n📊 ════════════════════════════════════════`)
   console.log(`   RESUMO DA BUSCA (${elapsed}s)`)
   console.log(`════════════════════════════════════════`)
-  console.log(`   YouTube:   ${results[0].totalResults} resultados ${results[0].source ? `(${results[0].source})` : ''} ${results[0].error ? '⚠️' : '✅'}`)
-  console.log(`   Twitter:   ${results[1].totalResults} resultados ${results[1].source ? `(${results[1].source})` : ''} ${results[1].error ? '⚠️' : '✅'}`)
-  console.log(`   Instagram: ${results[2].totalResults} resultados ${results[2].source ? `(${results[2].source})` : ''} ${results[2].error ? '⚠️' : '✅'}`)
-  console.log(`   TikTok:    ${results[3].totalResults} resultados ${results[3].source ? `(${results[3].source})` : ''} ${results[3].error ? '⚠️' : '✅'}`)
+  console.log(`   YouTube:   ${youtubeResult.totalResults} resultados ${youtubeResult.source ? `(${youtubeResult.source})` : ''} ${youtubeResult.error ? '⚠️' : '✅'}`)
   console.log(`════════════════════════════════════════\n`)
 
   return {
-    youtube: results[0],
-    twitter: results[1],
-    instagram: results[2],
-    tiktok: results[3]
+    youtube: youtubeResult,
+    twitter: { platform: 'twitter', posts: [], totalResults: 0 },
+    instagram: { platform: 'instagram', posts: [], totalResults: 0 },
+    tiktok: { platform: 'tiktok', posts: [], totalResults: 0 }
   }
 }
 
@@ -720,21 +713,54 @@ function generateDemoTikTokData(query: string): SocialSearchResult {
 export function analyzeSentiment(text: string): 'positivo' | 'negativo' | 'neutro' {
   const lower = text.toLowerCase()
 
+  // Comprehensive Brazilian political vocabulary
   const positiveWords = [
+    // General positive
     'aprova', 'elogia', 'sucesso', 'vitória', 'conquista', 'apoio', 'excelente',
     'bom', 'ótimo', 'melhor', 'parabeniza', 'crescimento', 'avanço', 'positivo',
-    'favorável', 'importante', 'destaque', 'lidera', 'popular'
+    'favorável', 'importante', 'destaque', 'lidera', 'popular', 'herói', 'coragem',
+    // Brazilian political context - positive framing
+    'acorda', 'liberdade', 'democracia', 'povo', 'luta', 'defende', 'líder',
+    'ovação', 'aplausos', 'manifestação', 'histórico', 'mandou recado',
+    'parou', 'levantou', 'mostrou força', 'enfrentou', 'resgatou'
   ]
 
   const negativeWords = [
+    // General negative
     'critica', 'acusa', 'escândalo', 'polêmica', 'fracasso', 'derrota', 'erro',
     'problema', 'crise', 'investiga', 'denuncia', 'corrupção', 'fraude', 'prisão',
-    'condenado', 'rejeita', 'protesto', 'negativo', 'queda'
+    'condenado', 'rejeita', 'protesto', 'negativo', 'queda',
+    // Brazilian political vocabulary - negative
+    'pateta', 'burro', 'idiota', 'cadeia', 'merecem cadeia', 'contra', 'abusos',
+    'censura', 'mentira', 'golpe', 'vergonha', 'absurdo', 'criminoso', 'ladrão',
+    'corrupto', 'ditadura', 'tirania', 'escravidão', 'perseguição'
   ]
 
   let score = 0
-  positiveWords.forEach(word => { if (lower.includes(word)) score++ })
-  negativeWords.forEach(word => { if (lower.includes(word)) score-- })
+
+  // Check for positive words
+  positiveWords.forEach(word => {
+    if (lower.includes(word)) score++
+  })
+
+  // Check for negative words
+  negativeWords.forEach(word => {
+    if (lower.includes(word)) score--
+  })
+
+  // Special case: "manifestação" or protest-related content with specific framing
+  // If it mentions a politician's name in a positive context like "parou AV Paulista" or "HISTÓRICO"
+  if ((lower.includes('parou') || lower.includes('histórico') || lower.includes('mandou')) &&
+      (lower.includes('manifestação') || lower.includes('avenida') || lower.includes('paulista'))) {
+    // Check if there are negative indicators too
+    const hasNegativeOverride = negativeWords.some(w => lower.includes(w))
+    if (!hasNegativeOverride) score++
+  }
+
+  // Heavy weight for the insult "pateta"
+  if (lower.includes('pateta')) {
+    score -= 2
+  }
 
   if (score > 0) return 'positivo'
   if (score < 0) return 'negativo'
