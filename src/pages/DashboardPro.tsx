@@ -1044,6 +1044,59 @@ export default function Dashboard() {
           </div>
         </div>
 
+        {/* PREVISÃO DE CRISE - ML */}
+        <div>
+          <h2 className="text-sm font-semibold mb-4 flex items-center gap-2" style={{ color: `${t.brightText}dd` }}>
+            🔮 Previsão de Crise (IA Preditiva)
+          </h2>
+          <Card style={{ backgroundColor: t.cardBg, borderColor: t.cardBorder }}>
+            <CardContent className="p-5">
+              <div className="grid md:grid-cols-3 gap-4 mb-4">
+                <div className="p-4 rounded-lg text-center" style={{ backgroundColor: t.filterBg }}>
+                  <div className="text-3xl font-bold text-[hsl(152,55%,50%)]">12%</div>
+                  <div className="text-xs mt-1" style={{ color: t.mutedText }}>Probabilidade de Crise (48h)</div>
+                  <div className="w-full h-2 rounded-full mt-2" style={{ backgroundColor: t.cardBorder }}>
+                    <div className="h-full rounded-full bg-[hsl(152,55%,50%)]" style={{ width: '12%' }} />
+                  </div>
+                </div>
+                <div className="p-4 rounded-lg text-center" style={{ backgroundColor: t.filterBg }}>
+                  <div className="text-3xl font-bold text-[hsl(43,96%,56%)]">3</div>
+                  <div className="text-xs mt-1" style={{ color: t.mutedText }}>Temas Sensíveis Ativos</div>
+                </div>
+                <div className="p-4 rounded-lg text-center" style={{ backgroundColor: t.filterBg }}>
+                  <div className="text-3xl font-bold" style={{ color: t.accentText }}>24h</div>
+                  <div className="text-xs mt-1" style={{ color: t.mutedText }}>Janela de Prevenção</div>
+                </div>
+              </div>
+              <div className="space-y-2">
+                {[
+                  { tema: 'Privatização de empresa pública', prob: 35, trend: 'subindo', action: 'Preparar nota de esclarecimento' },
+                  { tema: 'Polêmica sobre orçamento da saúde', prob: 22, trend: 'estável', action: 'Monitorar menções em redes' },
+                  { tema: 'Declaração sobre reforma tributária', prob: 15, trend: 'caindo', action: 'Nenhuma ação necessária' },
+                ].map((item, i) => (
+                  <div key={i} className="flex items-center gap-3 p-3 rounded-lg" style={{ backgroundColor: t.filterBg }}>
+                    <div className="w-12 text-center">
+                      <div className={`text-sm font-bold ${item.prob >= 30 ? 'text-[hsl(0,72%,55%)]' : item.prob >= 20 ? 'text-[hsl(43,96%,56%)]' : 'text-[hsl(152,55%,50%)]'}`}>
+                        {item.prob}%
+                      </div>
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium" style={{ color: t.brightText }}>{item.tema}</p>
+                      <p className="text-xs" style={{ color: t.mutedText }}>
+                        Tendência: {item.trend === 'subindo' ? '📈 Subindo' : item.trend === 'caindo' ? '📉 Caindo' : '➡️ Estável'}
+                        {' • '}{item.action}
+                      </p>
+                    </div>
+                    <Badge className={`text-[10px] ${item.prob >= 30 ? 'bg-red-900/50 text-red-300' : item.prob >= 20 ? 'bg-yellow-900/50 text-yellow-300' : 'bg-green-900/50 text-green-300'}`}>
+                      {item.prob >= 30 ? 'Alto' : item.prob >= 20 ? 'Médio' : 'Baixo'}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
         {/* ANÁLISE GEOGRÁFICA */}
         <div>
           <h2 className="text-sm font-semibold mb-4 flex items-center gap-2" style={{ color: `${t.brightText}dd` }}>

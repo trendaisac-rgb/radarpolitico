@@ -13,6 +13,8 @@ import Settings from "./pages/Settings";
 import Team from "./pages/Team";
 import Legislativo from "./pages/Legislativo";
 import Demographics from "./pages/Demographics";
+import MessageTest from "./pages/MessageTest";
+import HateSpeech from "./pages/HateSpeech";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -34,6 +36,8 @@ const App = () => (
             <Route path="/team" element={<Team />} />
             <Route path="/legislativo" element={<Legislativo />} />
             <Route path="/demographics" element={<Demographics />} />
+            <Route path="/message-test" element={<MessageTest />} />
+            <Route path="/hate-speech" element={<HateSpeech />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
