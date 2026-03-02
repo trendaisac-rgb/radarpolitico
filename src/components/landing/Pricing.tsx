@@ -5,11 +5,25 @@ import { getWhatsAppUrl } from "@/lib/constants";
 
 const plans = [
   {
+    name: "Essencial",
+    price: "79",
+    description: "Para começar a monitorar",
+    features: [
+      "1 político monitorado",
+      "Feed de notícias diário",
+      "Sentimento básico (positivo/neutro/negativo)",
+      "Acompanhamento de 1 adversário",
+      "Relatório semanal por WhatsApp",
+    ],
+    cta: "Começar com R$79",
+    popular: false,
+  },
+  {
     name: "Starter",
     price: "199",
     description: "Para vereadores e candidatos",
     features: [
-      "1 político monitorado",
+      "Tudo do Essencial +",
       "Relatório diário por IA (WhatsApp)",
       "Análise de sentimento automática",
       "Alertas de crise em tempo real",
@@ -75,7 +89,7 @@ export function Pricing() {
         </div>
 
         <div
-          className={`grid md:grid-cols-3 gap-8 max-w-5xl mx-auto stagger-children ${
+          className={`grid sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8 max-w-7xl mx-auto stagger-children ${
             isVisible ? "visible" : ""
           }`}
         >
@@ -141,8 +155,33 @@ export function Pricing() {
         </div>
 
         <p className="text-center text-sm text-muted-foreground mt-8">
-          Todos os planos incluem 7 dias de teste. Cancele quando quiser.
+          7 dias grátis em todos os planos. Cancele quando quiser.
         </p>
+
+        {/* ROI Section */}
+        <div className={`mt-20 transition-all duration-700 ${
+          isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
+        }`}>
+          <div className="bg-gradient-to-r from-accent/10 to-accent/5 rounded-2xl p-8 md:p-12 border border-accent/20 max-w-4xl mx-auto">
+            <h3 className="text-2xl md:text-3xl font-bold text-center text-foreground mb-6">
+              Retorno do Investimento
+            </h3>
+            <div className="grid md:grid-cols-2 gap-8 text-center">
+              <div>
+                <p className="text-4xl font-bold text-accent mb-2">15h</p>
+                <p className="text-foreground">
+                  Em média, nossos clientes economizam <span className="font-semibold">15 horas por semana</span> de trabalho manual de monitoramento
+                </p>
+              </div>
+              <div>
+                <p className="text-4xl font-bold text-accent mb-2">12x</p>
+                <p className="text-foreground">
+                  Com o RadarPolítico, sua assessoria identifica crises <span className="font-semibold">12 vezes mais rápido</span>
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
   );

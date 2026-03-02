@@ -256,12 +256,20 @@ export default function Dashboard() {
   const [themeKey, setThemeKey] = useState<ThemeKey>(() => {
     return (localStorage.getItem('dashboard-theme') as ThemeKey) || 'azul'
   })
+  const [viewMode, setViewMode] = useState<'pro' | 'simple'>(() => {
+    return (localStorage.getItem('dashboard-view-mode') as 'pro' | 'simple') || 'pro'
+  })
 
   const t = THEMES[themeKey]
 
   const handleThemeChange = (key: ThemeKey) => {
     setThemeKey(key)
     localStorage.setItem('dashboard-theme', key)
+  }
+
+  const handleViewModeChange = (mode: 'pro' | 'simple') => {
+    setViewMode(mode)
+    localStorage.setItem('dashboard-view-mode', mode)
   }
 
   // Auth
@@ -527,6 +535,8 @@ export default function Dashboard() {
           theme={t}
           themeKey={themeKey}
           onThemeChange={handleThemeChange}
+          viewMode={viewMode}
+          onViewModeChange={handleViewModeChange}
         />
         <main className="container mx-auto px-4 py-12">
           <Card className="max-w-md mx-auto text-center" style={{ backgroundColor: t.cardBg, borderColor: t.cardBorder }}>
@@ -570,6 +580,39 @@ export default function Dashboard() {
   // RENDER
   // ============================================
 
+  // Simple View mode - completely different layout
+  if (viewMode === 'simple') {
+    return (
+      <div className="min-h-screen" style={{ background: t.bgGradient, color: t.brightText }}>
+        <DashHeader
+          politician={currentPolitician || null}
+          politicians={politicians}
+          onSelectPolitician={setSelectedPolitician}
+          onRefresh={handleRunMonitoring}
+          onAddPolitician={() => navigate('/add-politician')}
+          onOpenReport={() => setShowReportModal(true)}
+          isRefreshing={isMonitoring || loadingSocial}
+          theme={t}
+          themeKey={themeKey}
+          onThemeChange={handleThemeChange}
+          viewMode={viewMode}
+          onViewModeChange={handleViewModeChange}
+        />
+        <SimpleView
+          politician={currentPolitician}
+          mentions={mentions}
+          score={score}
+          alertResult={alertResult}
+          aiAnalysis={aiAnalysis}
+          politicians={politicians}
+          theme={t}
+          onOpenReport={() => setShowReportModal(true)}
+          reportData={reportData}
+        />
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen" style={{ background: t.bgGradient, color: t.brightText }}>
       {/* Header */}
@@ -584,6 +627,8 @@ export default function Dashboard() {
         theme={t}
         themeKey={themeKey}
         onThemeChange={handleThemeChange}
+        viewMode={viewMode}
+        onViewModeChange={handleViewModeChange}
       />
 
       <main className="container mx-auto px-4 py-6 space-y-6">
@@ -591,7 +636,7 @@ export default function Dashboard() {
         {/* SCORE + EVOLUTION CHART */}
         <Card style={{ backgroundColor: t.cardBg, borderColor: t.cardBorder }}>
           <CardContent className="p-6">
-            <div className="flex flex-col lg:flex-row gap-6">
+            <div className="flex flex-col lg:flex-row gap-4 sm:gap-6">
               {/* Score grande */}
               <div className="flex flex-col items-center justify-center lg:w-48 shrink-0">
                 <div className={`text-6xl font-bold tracking-tight ${getScoreColor(score)}`}>
@@ -672,7 +717,7 @@ export default function Dashboard() {
             📊 Performance por Rede
             <span className="font-normal" style={{ color: t.mutedText }}>— {todayStr}</span>
           </h2>
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {NETWORKS.map(net => {
               const data = networkData[net.key]
               const hasMentions = data && data.mencoes > 0
@@ -865,20 +910,45 @@ export default function Dashboard() {
                       .filter(m => !m.source_name?.toLowerCase().includes('youtube'))
                       .slice(0, 15)
                       .map((m, i) => (
-                        <li key={i} className="border-b pb-2" style={{ borderColor: t.cardBorder }}>
+                        <li key={i} className="border-b pb-3" style={{ borderColor: t.cardBorder }}>
                           <a
                             href={m.url || '#'}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="block hover:opacity-80 transition-opacity"
+                            className="block hover:opacity-80 transition-opacity group"
                           >
-                            <p className="text-sm font-medium leading-tight mb-1" style={{ color: t.brightText }}>
+                            <p className="text-sm font-medium leading-tight mb-1.5" style={{ color: t.brightText }}>
                               {m.title || m.content?.substring(0, 100)}
                             </p>
-                            <div className="flex items-center gap-2 text-xs" style={{ color: t.mutedText }}>
-                              <span className="font-medium" style={{ color: t.accentText }}>{m.source_name || 'Fonte'}</span>
+                            {(m.content || m.summary) && (
+                              <p className="text-xs leading-relaxed mb-2 italic" style={{ color: `${t.bodyText}cc` }}>
+                                &ldquo;{(m.content || m.summary || '').substring(0, 180).trim()}{(m.content || m.summary || '').length > 180 ? '...' : ''}&rdquo;
+                              </p>
+                            )}
+                            <div className="flex items-center gap-2 text-xs flex-wrap" style={{ color: t.mutedText }}>
+                              <span className="inline-flex items-center gap-1.5 font-semibold px-2 py-0.5 rounded" style={{ backgroundColor: t.filterBg, color: t.accentText }}>
+                                {m.source_name?.toLowerCase().includes('folha') ? '📰' :
+                                 m.source_name?.toLowerCase().includes('globo') || m.source_name?.toLowerCase().includes('g1') ? '🌐' :
+                                 m.source_name?.toLowerCase().includes('uol') ? '📡' :
+                                 m.source_name?.toLowerCase().includes('estadao') || m.source_name?.toLowerCase().includes('estadão') ? '📰' :
+                                 m.source_name?.toLowerCase().includes('band') ? '📺' :
+                                 m.source_name?.toLowerCase().includes('cnn') ? '📺' :
+                                 m.source_name?.toLowerCase().includes('sbt') ? '📺' :
+                                 m.source_name?.toLowerCase().includes('record') ? '📺' :
+                                 m.source_name?.toLowerCase().includes('poder360') ? '⚡' :
+                                 '📰'}{' '}
+                                {m.source_name || 'Fonte'}
+                              </span>
                               <span>•</span>
-                              <span>{m.published_at ? new Date(m.published_at).toLocaleDateString('pt-BR') : ''}</span>
+                              <span>{m.published_at ? new Date(m.published_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }) : ''}</span>
+                              {m.url && (
+                                <>
+                                  <span>•</span>
+                                  <span className="opacity-60 group-hover:opacity-100 transition-opacity" style={{ color: t.accentText }}>
+                                    {(() => { try { return new URL(m.url).hostname.replace('www.', '') } catch { return '' } })()}
+                                  </span>
+                                </>
+                              )}
                               {m.sentiment && (
                                 <>
                                   <span>•</span>
@@ -887,7 +957,9 @@ export default function Dashboard() {
                                     m.sentiment === 'negativo' ? 'bg-red-900/50 text-red-300' :
                                     'bg-gray-700/50 text-gray-300'
                                   }`}>
-                                    {m.sentiment}
+                                    {m.sentiment === 'positivo' ? '↑ Positivo' :
+                                     m.sentiment === 'negativo' ? '↓ Negativo' :
+                                     '→ Neutro'}
                                   </Badge>
                                 </>
                               )}
@@ -1009,7 +1081,9 @@ function DashHeader({
   isRefreshing,
   theme: t,
   themeKey,
-  onThemeChange
+  onThemeChange,
+  viewMode,
+  onViewModeChange
 }: {
   politician: Politician | null
   politicians: Politician[]
@@ -1021,6 +1095,8 @@ function DashHeader({
   theme: typeof THEMES[ThemeKey]
   themeKey: ThemeKey
   onThemeChange: (key: ThemeKey) => void
+  viewMode: 'pro' | 'simple'
+  onViewModeChange: (mode: 'pro' | 'simple') => void
 }) {
   const navigate = useNavigate()
 
@@ -1036,6 +1112,32 @@ function DashHeader({
         </div>
 
         <div className="flex items-center gap-3">
+          {/* View Mode Toggle */}
+          <div className="flex items-center gap-1 rounded-lg p-1" style={{ backgroundColor: t.filterBg }}>
+            <button
+              onClick={() => onViewModeChange('pro')}
+              className="px-3 py-1 text-xs font-medium rounded-md transition-all"
+              style={{
+                backgroundColor: viewMode === 'pro' ? t.filterActive : 'transparent',
+                color: viewMode === 'pro' ? t.brightText : t.mutedText
+              }}
+              title="Vista Profissional"
+            >
+              Vista Completa
+            </button>
+            <button
+              onClick={() => onViewModeChange('simple')}
+              className="px-3 py-1 text-xs font-medium rounded-md transition-all"
+              style={{
+                backgroundColor: viewMode === 'simple' ? t.filterActive : 'transparent',
+                color: viewMode === 'simple' ? t.brightText : t.mutedText
+              }}
+              title="Vista Simplificada"
+            >
+              Vista Simples
+            </button>
+          </div>
+
           {/* Theme picker */}
           <div className="relative group">
             <button className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg transition-colors" style={{ color: t.bodyText }}
@@ -1124,5 +1226,211 @@ function DashHeader({
         </div>
       </div>
     </header>
+  )
+}
+
+// ============================================
+// SIMPLE VIEW COMPONENT (for non-technical politicians)
+// ============================================
+
+function SimpleView({
+  politician,
+  mentions,
+  score,
+  alertResult,
+  aiAnalysis,
+  politicians,
+  theme: t,
+  onOpenReport,
+  reportData
+}: {
+  politician: Politician | undefined
+  mentions: Mention[]
+  score: number
+  alertResult: ReturnType<typeof getAlertLevel>
+  aiAnalysis: AIAnalysisResult | null
+  politicians: Politician[]
+  theme: typeof THEMES[ThemeKey]
+  onOpenReport: () => void
+  reportData: ReportData
+}) {
+  const todayStr = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })
+
+  // Sentiment emoji and text
+  const getSentimentDisplay = () => {
+    if (score >= 70) return { emoji: '🟢', text: 'Positivo', color: 'text-[hsl(152,55%,50%)]' }
+    if (score >= 50) return { emoji: '🟡', text: 'Neutro', color: 'text-[hsl(43,96%,56%)]' }
+    return { emoji: '🔴', text: 'Negativo', color: 'text-[hsl(0,72%,55%)]' }
+  }
+
+  const sentiment = getSentimentDisplay()
+  const todayMentions = mentions.filter(m => {
+    const mDate = new Date(m.published_at || m.created_at).toLocaleDateString('pt-BR')
+    const today = new Date().toLocaleDateString('pt-BR')
+    return mDate === today
+  })
+
+  // Top 3 mentions
+  const topMentions = mentions.slice(0, 3)
+
+  // Find main competitor
+  const mainCompetitor = politicians?.find(p => p.id !== politician?.id)
+
+  return (
+    <main className="container mx-auto px-4 py-6 space-y-8 max-w-2xl">
+      {/* ALERT BANNER - Crisis indicator */}
+      {alertResult.level === 'vermelho' && (
+        <div className="p-6 rounded-lg border-2" style={{
+          backgroundColor: 'hsl(0,30%,15%)',
+          borderColor: 'hsl(0,72%,55%)'
+        }}>
+          <div className="flex items-start gap-4">
+            <div className="text-4xl">🚨</div>
+            <div>
+              <h2 className="text-2xl font-bold text-[hsl(0,72%,55%)] mb-2">ALERTA DE CRISE</h2>
+              <p className="text-lg" style={{ color: t.brightText }}>
+                {alertResult.reason || 'Comportamento negativo detectado. Ação recomendada!'}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* SENTIMENT INDICATOR - Big emoji */}
+      <Card style={{ backgroundColor: t.cardBg, borderColor: t.cardBorder }}>
+        <CardContent className="p-8 text-center">
+          <div className="text-7xl mb-4">{sentiment.emoji}</div>
+          <h1 className="text-4xl font-bold mb-2" style={{ color: t.brightText }}>
+            Seu Sentimento
+          </h1>
+          <p className={`text-3xl font-bold ${sentiment.color}`}>
+            {sentiment.text}
+          </p>
+          <p className="text-lg mt-4" style={{ color: t.mutedText }}>
+            Score: {score.toFixed(0)}/100
+          </p>
+        </CardContent>
+      </Card>
+
+      {/* MENTIONS COUNT */}
+      <Card style={{ backgroundColor: t.cardBg, borderColor: t.cardBorder }}>
+        <CardContent className="p-8">
+          <div className="text-center">
+            <p className="text-xl" style={{ color: t.mutedText }}>Você apareceu</p>
+            <p className="text-5xl font-bold mt-2" style={{ color: t.brightText }}>
+              {todayMentions.length}
+            </p>
+            <p className="text-lg mt-2" style={{ color: t.mutedText }}>
+              vezes na mídia hoje
+            </p>
+            <p className="text-base mt-4" style={{ color: `${t.mutedText}99` }}>
+              Total: {mentions.length} menções
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* TOP 3 MENTIONS */}
+      {topMentions.length > 0 && (
+        <Card style={{ backgroundColor: t.cardBg, borderColor: t.cardBorder }}>
+          <CardContent className="p-6">
+            <h2 className="text-2xl font-bold mb-6" style={{ color: t.brightText }}>
+              📰 Principais Notícias
+            </h2>
+            <div className="space-y-4">
+              {topMentions.map((mention, i) => (
+                <a
+                  key={i}
+                  href={mention.url || '#'}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block p-4 rounded-lg transition-colors"
+                  style={{
+                    backgroundColor: t.filterBg,
+                    borderLeft: `4px solid ${
+                      mention.sentiment === 'positivo' ? 'hsl(152,55%,50%)' :
+                      mention.sentiment === 'negativo' ? 'hsl(0,72%,55%)' :
+                      'hsl(43,96%,56%)'
+                    }`
+                  }}
+                >
+                  <p className="text-lg font-semibold mb-2" style={{ color: t.brightText }}>
+                    {mention.title || mention.content?.substring(0, 80)}
+                  </p>
+                  <div className="flex items-center gap-3 text-base" style={{ color: t.mutedText }}>
+                    <span style={{ color: t.accentText }} className="font-medium">
+                      {mention.source_name || 'Fonte desconhecida'}
+                    </span>
+                    <span>•</span>
+                    <span>
+                      {mention.published_at ? new Date(mention.published_at).toLocaleDateString('pt-BR') : ''}
+                    </span>
+                  </div>
+                </a>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* COMPETITOR SUMMARY */}
+      {mainCompetitor && (
+        <Card style={{ backgroundColor: t.cardBg, borderColor: t.cardBorder }}>
+          <CardContent className="p-6">
+            <h2 className="text-2xl font-bold mb-4" style={{ color: t.brightText }}>
+              👥 Seu Adversário
+            </h2>
+            <div className="bg-gray-800/30 p-6 rounded-lg">
+              <p className="text-3xl font-bold mb-2" style={{ color: t.brightText }}>
+                {mainCompetitor.nickname || mainCompetitor.name}
+              </p>
+              <p className="text-lg" style={{ color: t.mutedText }}>
+                Apareceu <span style={{ color: t.brightText }} className="font-bold">
+                  {mentions.filter(m => m.politician_id === mainCompetitor.id).length}
+                </span> vezes
+              </p>
+              {mainCompetitor.party && (
+                <p className="text-base mt-2" style={{ color: t.bodyText }}>
+                  Partido: <span className="font-semibold">{mainCompetitor.party}</span>
+                </p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* AI SUMMARY */}
+      {aiAnalysis && aiAnalysis.summary && (
+        <Card style={{ backgroundColor: t.cardBg, borderColor: t.accentText, borderLeftWidth: '4px' }}>
+          <CardContent className="p-6">
+            <h2 className="text-2xl font-bold mb-4 flex items-center gap-2" style={{ color: t.brightText }}>
+              🤖 O que está acontecendo
+            </h2>
+            <p className="text-lg leading-relaxed whitespace-pre-line" style={{ color: t.bodyText }}>
+              {aiAnalysis.summary}
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* WHATSAPP BUTTON - Prominent */}
+      <Button
+        onClick={onOpenReport}
+        size="lg"
+        className="w-full py-8 text-xl font-bold"
+        style={{
+          backgroundColor: 'hsl(120,55%,45%)',
+          color: 'white'
+        }}
+      >
+        📱 Gerar Relatório WhatsApp
+      </Button>
+
+      {/* Footer */}
+      <footer className="text-center py-6 text-base" style={{ color: `${t.mutedText}88` }}>
+        <p>{todayStr}</p>
+        <p className="mt-2 text-sm">Monitor Político 360° • Vista Simplificada</p>
+      </footer>
+    </main>
   )
 }

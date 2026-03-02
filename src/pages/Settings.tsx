@@ -53,7 +53,10 @@ import {
   ArrowLeft,
   Loader2,
   Palette,
-  X
+  X,
+  Hash,
+  Search,
+  Tag
 } from 'lucide-react'
 import { supabase, type Politician } from '@/integrations/supabase/client'
 import { toast } from 'sonner'
@@ -899,6 +902,236 @@ function TabAssinatura({
   )
 }
 
+
+// ============================================
+// TAB TOPICOS - Topic/Keyword Monitoring
+// ============================================
+
+interface TabTopicosProps {
+  theme: typeof THEMES[ThemeKey]
+  userId: string | null
+}
+
+const SUGGESTED_TOPICS = [
+  { label: 'Saúde Pública', keywords: ['saúde pública', 'SUS', 'hospital', 'UBS', 'vacina'] },
+  { label: 'Educação', keywords: ['educação', 'escola', 'professor', 'ENEM', 'universidade'] },
+  { label: 'Segurança', keywords: ['segurança pública', 'polícia', 'criminalidade', 'violência'] },
+  { label: 'Economia', keywords: ['economia', 'PIB', 'inflação', 'emprego', 'salário mínimo'] },
+  { label: 'Meio Ambiente', keywords: ['meio ambiente', 'desmatamento', 'clima', 'sustentabilidade'] },
+  { label: 'Infraestrutura', keywords: ['infraestrutura', 'obras', 'saneamento', 'transporte'] },
+  { label: 'Reforma Tributária', keywords: ['reforma tributária', 'impostos', 'IVA', 'tributação'] },
+  { label: 'Eleições 2026', keywords: ['eleições 2026', 'candidato', 'pesquisa eleitoral', 'campanha'] },
+]
+
+function TabTopicos({ theme, userId }: TabTopicosProps) {
+  const [topics, setTopics] = useState<{ id: string; name: string; keywords: string[]; isActive: boolean }[]>(() => {
+    try {
+      const saved = localStorage.getItem('monitored-topics')
+      return saved ? JSON.parse(saved) : []
+    } catch { return [] }
+  })
+  const [newTopicName, setNewTopicName] = useState('')
+  const [newTopicKeywords, setNewTopicKeywords] = useState('')
+  const [showAddForm, setShowAddForm] = useState(false)
+
+  const saveTopic = () => {
+    if (!newTopicName.trim()) {
+      toast.error('Digite um nome para o tópico')
+      return
+    }
+    const keywords = newTopicKeywords
+      .split(',')
+      .map(k => k.trim())
+      .filter(k => k.length > 0)
+    
+    if (keywords.length === 0) {
+      toast.error('Adicione pelo menos uma palavra-chave')
+      return
+    }
+
+    const newTopic = {
+      id: Date.now().toString(),
+      name: newTopicName.trim(),
+      keywords,
+      isActive: true,
+    }
+    const updated = [...topics, newTopic]
+    setTopics(updated)
+    localStorage.setItem('monitored-topics', JSON.stringify(updated))
+    setNewTopicName('')
+    setNewTopicKeywords('')
+    setShowAddForm(false)
+    toast.success(`Tópico "${newTopic.name}" adicionado!`)
+  }
+
+  const addSuggestedTopic = (suggestion: typeof SUGGESTED_TOPICS[0]) => {
+    if (topics.find(t => t.name === suggestion.label)) {
+      toast.info('Este tópico já foi adicionado')
+      return
+    }
+    const newTopic = {
+      id: Date.now().toString(),
+      name: suggestion.label,
+      keywords: suggestion.keywords,
+      isActive: true,
+    }
+    const updated = [...topics, newTopic]
+    setTopics(updated)
+    localStorage.setItem('monitored-topics', JSON.stringify(updated))
+    toast.success(`Tópico "${suggestion.label}" adicionado!`)
+  }
+
+  const toggleTopic = (id: string) => {
+    const updated = topics.map(t => t.id === id ? { ...t, isActive: !t.isActive } : t)
+    setTopics(updated)
+    localStorage.setItem('monitored-topics', JSON.stringify(updated))
+  }
+
+  const deleteTopic = (id: string) => {
+    const updated = topics.filter(t => t.id !== id)
+    setTopics(updated)
+    localStorage.setItem('monitored-topics', JSON.stringify(updated))
+    toast.success('Tópico removido')
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Suggested Topics */}
+      <div className="p-6 rounded-lg border" style={{ backgroundColor: theme.cardBg, borderColor: theme.cardBorder }}>
+        <h3 className="font-semibold mb-4 flex items-center gap-2" style={{ color: theme.brightText }}>
+          <Search className="h-4 w-4" />
+          Tópicos Sugeridos
+        </h3>
+        <p className="text-sm mb-4" style={{ color: theme.mutedText }}>
+          Clique para adicionar tópicos comuns ao seu monitoramento
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {SUGGESTED_TOPICS.map((suggestion, i) => {
+            const isAdded = topics.find(t => t.name === suggestion.label)
+            return (
+              <button
+                key={i}
+                onClick={() => addSuggestedTopic(suggestion)}
+                disabled={!!isAdded}
+                className="px-3 py-2 rounded-lg text-sm font-medium transition-all border"
+                style={{
+                  backgroundColor: isAdded ? theme.filterActive : theme.filterBg,
+                  borderColor: isAdded ? theme.accentText : theme.cardBorder,
+                  color: isAdded ? theme.accentText : theme.bodyText,
+                  opacity: isAdded ? 0.7 : 1,
+                  cursor: isAdded ? 'default' : 'pointer',
+                }}
+              >
+                {isAdded ? <Check className="h-3 w-3 inline mr-1" /> : <Plus className="h-3 w-3 inline mr-1" />}
+                {suggestion.label}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Custom Topic Form */}
+      <div className="p-6 rounded-lg border" style={{ backgroundColor: theme.cardBg, borderColor: theme.cardBorder }}>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-semibold flex items-center gap-2" style={{ color: theme.brightText }}>
+            <Tag className="h-4 w-4" />
+            Tópico Personalizado
+          </h3>
+          {!showAddForm && (
+            <Button size="sm" onClick={() => setShowAddForm(true)} style={{ backgroundColor: theme.accentText }} className="text-white">
+              <Plus className="h-4 w-4 mr-1" /> Novo Tópico
+            </Button>
+          )}
+        </div>
+
+        {showAddForm && (
+          <div className="space-y-4 p-4 rounded-lg border" style={{ backgroundColor: theme.filterBg, borderColor: theme.cardBorder }}>
+            <div className="space-y-2">
+              <Label style={{ color: theme.bodyText }}>Nome do Tópico</Label>
+              <Input
+                placeholder="Ex: Reforma da Previdência"
+                value={newTopicName}
+                onChange={(e) => setNewTopicName(e.target.value)}
+                style={{ backgroundColor: theme.cardBg, borderColor: theme.cardBorder, color: theme.bodyText }}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label style={{ color: theme.bodyText }}>Palavras-chave (separadas por vírgula)</Label>
+              <Input
+                placeholder="Ex: previdência, aposentadoria, INSS, reforma"
+                value={newTopicKeywords}
+                onChange={(e) => setNewTopicKeywords(e.target.value)}
+                style={{ backgroundColor: theme.cardBg, borderColor: theme.cardBorder, color: theme.bodyText }}
+              />
+              <p className="text-xs" style={{ color: theme.mutedText }}>
+                Separe múltiplas palavras-chave com vírgulas
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <Button size="sm" onClick={saveTopic} style={{ backgroundColor: theme.accentText }} className="text-white">
+                <Save className="h-4 w-4 mr-1" /> Salvar
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => { setShowAddForm(false); setNewTopicName(''); setNewTopicKeywords('') }}
+                style={{ color: theme.bodyText }}>
+                Cancelar
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Active Topics List */}
+      <div className="p-6 rounded-lg border" style={{ backgroundColor: theme.cardBg, borderColor: theme.cardBorder }}>
+        <h3 className="font-semibold mb-4 flex items-center gap-2" style={{ color: theme.brightText }}>
+          <Hash className="h-4 w-4" />
+          Meus Tópicos ({topics.length})
+        </h3>
+
+        {topics.length === 0 ? (
+          <div className="text-center py-8">
+            <Hash className="h-12 w-12 mx-auto mb-4 opacity-30" style={{ color: theme.mutedText }} />
+            <p style={{ color: theme.mutedText }}>Nenhum tópico adicionado. Selecione sugestões acima ou crie um personalizado.</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {topics.map(topic => (
+              <div key={topic.id} className="p-4 rounded-lg border transition-all" style={{
+                backgroundColor: topic.isActive ? theme.filterBg : 'transparent',
+                borderColor: topic.isActive ? theme.cardHoverBorder : theme.cardBorder,
+                opacity: topic.isActive ? 1 : 0.6,
+              }}>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-3">
+                    <h4 className="font-medium" style={{ color: theme.brightText }}>{topic.name}</h4>
+                    {topic.isActive ? (
+                      <Badge style={{ backgroundColor: theme.accentMuted, color: theme.accentText }} className="text-[10px]">Ativo</Badge>
+                    ) : (
+                      <Badge variant="outline" style={{ borderColor: theme.mutedText, color: theme.mutedText }} className="text-[10px]">Pausado</Badge>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Switch checked={topic.isActive} onCheckedChange={() => toggleTopic(topic.id)} />
+                    <Button variant="ghost" size="sm" onClick={() => deleteTopic(topic.id)} className="text-red-500 hover:text-red-600">
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {topic.keywords.map((kw, ki) => (
+                    <span key={ki} className="px-2 py-0.5 rounded text-xs" style={{ backgroundColor: theme.accentMuted, color: theme.accentText }}>
+                      {kw}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ============================================
 // MAIN COMPONENT
 // ============================================
@@ -1086,7 +1319,7 @@ export default function Settings() {
         {/* Tabs */}
         <Tabs defaultValue="politicos" className="space-y-6">
           <TabsList
-            className="grid w-full grid-cols-3"
+            className="grid w-full grid-cols-4"
             style={{
               backgroundColor: theme.cardBg,
               borderColor: theme.cardBorder,
@@ -1103,6 +1336,10 @@ export default function Settings() {
             <TabsTrigger value="assinatura" style={{ color: theme.bodyText }}>
               <CreditCard className="h-4 w-4 mr-2" />
               Assinatura
+            </TabsTrigger>
+            <TabsTrigger value="topicos" style={{ color: theme.bodyText }}>
+              <Hash className="h-4 w-4 mr-2" />
+              Tópicos
             </TabsTrigger>
           </TabsList>
 
@@ -1132,6 +1369,13 @@ export default function Settings() {
               politiciansCount={politicians.length}
               loading={loading}
               theme={theme}
+            />
+          </TabsContent>
+
+          <TabsContent value="topicos">
+            <TabTopicos
+              theme={theme}
+              userId={userId}
             />
           </TabsContent>
         </Tabs>
