@@ -37,12 +37,26 @@ export function Sidebar() {
     return localStorage.getItem('sidebar-collapsed') === 'true'
   })
   const [mobileOpen, setMobileOpen] = useState(false)
-  const themeKey = (localStorage.getItem('dashboard-theme') as ThemeKey) || 'azul'
+  const [themeKey, setThemeKey] = useState<ThemeKey>(() => {
+    const stored = localStorage.getItem('dashboard-theme') as ThemeKey
+    return stored && themeStyles[stored] ? stored : 'azul'
+  })
   const t = themeStyles[themeKey]
 
   useEffect(() => {
     localStorage.setItem('sidebar-collapsed', String(collapsed))
   }, [collapsed])
+
+  // Listen for theme changes from other components
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const stored = localStorage.getItem('dashboard-theme') as ThemeKey
+      if (stored && stored !== themeKey && themeStyles[stored]) {
+        setThemeKey(stored)
+      }
+    }, 1000)
+    return () => clearInterval(interval)
+  }, [themeKey])
 
   // Close mobile sidebar on route change
   useEffect(() => {

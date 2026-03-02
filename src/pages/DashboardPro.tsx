@@ -550,7 +550,9 @@ export default function Dashboard() {
 
   if (!politicians || politicians.length === 0) {
     return (
-      <div className="min-h-screen" style={{ background: t.bgGradient, color: t.brightText }}>
+      <div className="flex">
+        <Sidebar />
+        <div className="flex-1 md:pl-16 min-h-screen" style={{ background: t.bgGradient, color: t.brightText }}>
         <DashHeader
           politician={null}
           politicians={[]}
@@ -582,6 +584,7 @@ export default function Dashboard() {
           </Card>
         </main>
       </div>
+      </div>
     )
   }
 
@@ -611,7 +614,9 @@ export default function Dashboard() {
   // Simple View mode - completely different layout
   if (viewMode === 'simple') {
     return (
-      <div className="min-h-screen" style={{ background: t.bgGradient, color: t.brightText }}>
+      <div className="flex">
+        <Sidebar />
+        <div className="flex-1 md:pl-16 min-h-screen" style={{ background: t.bgGradient, color: t.brightText }}>
         <DashHeader
           politician={currentPolitician || null}
           politicians={politicians}
@@ -638,6 +643,7 @@ export default function Dashboard() {
           onOpenReport={() => setShowReportModal(true)}
           reportData={reportData}
         />
+      </div>
       </div>
     )
   }

@@ -30,9 +30,18 @@ export function GlobalSearch() {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [selectedIndex, setSelectedIndex] = useState(0)
+  const [themeKey, setThemeKey] = useState<ThemeKey>('azul')
   const inputRef = useRef<HTMLInputElement>(null)
   const navigate = useNavigate()
-  const themeKey = (localStorage.getItem('dashboard-theme') as ThemeKey) || 'azul'
+
+  // Read theme fresh each time search opens
+  useEffect(() => {
+    if (open) {
+      const stored = localStorage.getItem('dashboard-theme') as ThemeKey
+      if (stored && themeColors[stored]) setThemeKey(stored)
+    }
+  }, [open])
+
   const t = themeColors[themeKey]
 
   useEffect(() => {

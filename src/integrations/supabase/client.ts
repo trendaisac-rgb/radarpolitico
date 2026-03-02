@@ -6,8 +6,8 @@
 import { createClient } from '@supabase/supabase-js'
 import type { Database } from './types'
 
-const SUPABASE_URL = "https://shdnkxjqprvbsgaegcia.supabase.co"
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNoZG5reGpxcHJ2YnNnYWVnY2lhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIzOTk0ODIsImV4cCI6MjA4Nzk3NTQ4Mn0.b-dOsM60n7Ma0oKPhJfJZpoXSXr_B9YupBmk6E2pW6Y"
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "https://shdnkxjqprvbsgaegcia.supabase.co"
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNoZG5reGpxcHJ2YnNnYWVnY2lhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIzOTk0ODIsImV4cCI6MjA4Nzk3NTQ4Mn0.b-dOsM60n7Ma0oKPhJfJZpoXSXr_B9YupBmk6E2pW6Y"
 
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {

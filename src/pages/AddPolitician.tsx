@@ -77,6 +77,16 @@ export default function AddPolitician() {
       return
     }
 
+    if (formData.name.trim().length < 3) {
+      toast.error('Nome deve ter pelo menos 3 caracteres')
+      return
+    }
+
+    if (formData.name.trim().length > 100) {
+      toast.error('Nome não pode exceder 100 caracteres')
+      return
+    }
+
     setIsSubmitting(true)
 
     try {
