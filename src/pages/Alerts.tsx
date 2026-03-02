@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Sidebar } from '@/components/Sidebar'
 import {
   AlertTriangle, Bell, Shield, TrendingUp, Eye, Clock, Filter, CheckCheck,
   Loader2, RefreshCw, Plus, Palette, ChevronDown, ExternalLink, X
@@ -425,18 +426,20 @@ export default function AlertsPage() {
   }
 
   return (
-    <div className="min-h-screen" style={{ background: t.bgGradient, color: t.brightText }}>
-      {/* Header */}
-      <AlertsHeader
-        themeKey={themeKey}
-        onThemeChange={handleThemeChange}
-        theme={t}
-        isRefreshing={isRefreshing}
-        onRefresh={handleRefresh}
-        onAddPolitician={() => navigate('/add-politician')}
-      />
+    <div className="flex">
+      <Sidebar />
+      <div className="flex-1 md:pl-16 min-h-screen" style={{ background: t.bgGradient, color: t.brightText }}>
+        {/* Header */}
+        <AlertsHeader
+          themeKey={themeKey}
+          onThemeChange={handleThemeChange}
+          theme={t}
+          isRefreshing={isRefreshing}
+          onRefresh={handleRefresh}
+          onAddPolitician={() => navigate('/add-politician')}
+        />
 
-      <main className="container mx-auto px-4 py-6 space-y-6">
+        <main className="container mx-auto px-4 py-6 space-y-6">
         {/* STATS SUMMARY */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard
@@ -654,6 +657,7 @@ export default function AlertsPage() {
           Sistema de Alertas em Tempo Real • Atualiza a cada minuto
         </footer>
       </main>
+      </div>
     </div>
   )
 }

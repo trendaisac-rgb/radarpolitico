@@ -58,6 +58,13 @@ export default function Onboarding() {
   const [loading, setLoading] = useState(false)
   const [userId, setUserId] = useState<string | null>(null)
 
+  // Guard: prevent re-entry if onboarding already complete
+  useEffect(() => {
+    if (localStorage.getItem('onboarding-complete') === 'true') {
+      navigate('/dashboard')
+    }
+  }, [navigate])
+
   // Form data
   const [persona, setPersona] = useState('')
   const [cargo, setCargo] = useState('')
@@ -118,9 +125,9 @@ export default function Onboarding() {
       // Set view mode based on persona
       const selectedPersona = PERSONA_TYPES.find(p => p.id === persona)
       if (selectedPersona?.recommended.includes('simple_view')) {
-        localStorage.setItem('view-mode', 'simple')
+        localStorage.setItem('dashboard-view-mode', 'simple')
       } else {
-        localStorage.setItem('view-mode', 'pro')
+        localStorage.setItem('dashboard-view-mode', 'pro')
       }
 
       toast.success('Tudo pronto! Redirecionando para o dashboard...')

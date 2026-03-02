@@ -8,6 +8,7 @@ import { useNavigate } from 'react-router-dom'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Sidebar } from '@/components/Sidebar'
 import {
   ArrowLeft, Loader2, Shield, AlertTriangle, Eye,
   Flag, TrendingDown, Phone, ExternalLink, Heart
@@ -87,8 +88,10 @@ export default function HateSpeech() {
   if (loading) return <div className="min-h-screen flex items-center justify-center" style={{ background: t.bgGradient }}><Loader2 className="h-8 w-8 animate-spin" style={{ color: t.accentText }} /></div>
 
   return (
-    <div className="min-h-screen p-4" style={{ background: t.bgGradient }}>
-      <div className="container max-w-5xl mx-auto">
+    <div className="flex">
+      <Sidebar />
+      <div className="flex-1 md:pl-16 min-h-screen p-4" style={{ background: t.bgGradient }}>
+        <div className="container max-w-5xl mx-auto">
         <div className="flex items-center gap-4 mb-8">
           <Button variant="ghost" onClick={() => navigate('/dashboard')} style={{ color: t.bodyText }}><ArrowLeft className="h-4 w-4" /></Button>
           <div>
@@ -195,6 +198,7 @@ export default function HateSpeech() {
             </div>
           </CardContent>
         </Card>
+        </div>
       </div>
     </div>
   )

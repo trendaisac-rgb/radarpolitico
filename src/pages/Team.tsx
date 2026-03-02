@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
+import { Sidebar } from '@/components/Sidebar'
 import {
   Select,
   SelectContent,
@@ -220,8 +221,10 @@ export default function Team() {
   }
 
   return (
-    <div className="min-h-screen p-4" style={{ background: t.bgGradient }}>
-      <div className="container max-w-4xl mx-auto">
+    <div className="flex">
+      <Sidebar />
+      <div className="flex-1 md:pl-16 min-h-screen p-4" style={{ background: t.bgGradient }}>
+        <div className="container max-w-4xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
@@ -437,6 +440,7 @@ export default function Team() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      </div>
     </div>
   )
 }

@@ -9,8 +9,9 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Sidebar } from '@/components/Sidebar'
 import {
-  BarChart3, Loader2, RefreshCw, Plus, FileDown, ChevronDown,
+  BarChart3, Loader2, RefreshCw, Plus, FileDown, ChevronDown, Download,
   Brain, FileText, Lightbulb, CheckCircle2, Sparkles, AlertTriangle, TrendingUp as TrendingUpIcon, Palette,
   Bell, Users, Settings,
   MapPin, Bot, ShieldAlert, Zap, Target,
@@ -263,6 +264,30 @@ export default function Dashboard() {
   })
 
   const t = THEMES[themeKey]
+
+  const exportCSV = () => {
+    if (!mentions.length) {
+      toast.error('Sem dados para exportar')
+      return
+    }
+    const headers = ['Data','Fonte','Título','Sentimento','URL']
+    const rows = mentions.map(m => [
+      new Date(m.published_at || m.created_at).toLocaleDateString('pt-BR'),
+      m.source_name || 'N/A',
+      `"${(m.title || '').replace(/"/g, '""')}"`,
+      m.sentiment || 'neutro',
+      m.url || ''
+    ])
+    const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n')
+    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `radar-politico-${currentPolitician?.name?.replace(/\s/g,'-') || 'export'}-${new Date().toISOString().split('T')[0]}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+    toast.success('CSV exportado com sucesso!')
+  }
 
   const handleThemeChange = (key: ThemeKey) => {
     setThemeKey(key)
@@ -533,6 +558,7 @@ export default function Dashboard() {
           onRefresh={() => {}}
           onAddPolitician={() => navigate('/add-politician')}
           onOpenReport={() => {}}
+          onExportCSV={exportCSV}
           isRefreshing={false}
           theme={t}
           themeKey={themeKey}
@@ -593,6 +619,7 @@ export default function Dashboard() {
           onRefresh={handleRunMonitoring}
           onAddPolitician={() => navigate('/add-politician')}
           onOpenReport={() => setShowReportModal(true)}
+          onExportCSV={exportCSV}
           isRefreshing={isMonitoring || loadingSocial}
           theme={t}
           themeKey={themeKey}
@@ -616,15 +643,18 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen" style={{ background: t.bgGradient, color: t.brightText }}>
-      {/* Header */}
-      <DashHeader
+    <div className="flex">
+      <Sidebar />
+      <div className="flex-1 md:pl-16" style={{ background: t.bgGradient, color: t.brightText, minHeight: '100vh' }}>
+        {/* Header */}
+        <DashHeader
         politician={currentPolitician || null}
         politicians={politicians}
         onSelectPolitician={setSelectedPolitician}
         onRefresh={handleRunMonitoring}
         onAddPolitician={() => navigate('/add-politician')}
         onOpenReport={() => setShowReportModal(true)}
+        onExportCSV={exportCSV}
         isRefreshing={isMonitoring || loadingSocial}
         theme={t}
         themeKey={themeKey}
@@ -1269,6 +1299,7 @@ export default function Dashboard() {
         </DialogContent>
       </Dialog>
     </div>
+    </div>
   )
 }
 
@@ -1285,6 +1316,7 @@ function DashHeader({
   onRefresh,
   onAddPolitician,
   onOpenReport,
+  onExportCSV,
   isRefreshing,
   theme: t,
   themeKey,
@@ -1298,6 +1330,7 @@ function DashHeader({
   onRefresh: () => void
   onAddPolitician: () => void
   onOpenReport: () => void
+  onExportCSV: () => void
   isRefreshing: boolean
   theme: typeof THEMES[ThemeKey]
   themeKey: ThemeKey
@@ -1372,6 +1405,9 @@ function DashHeader({
             </Button>
             <Button variant="ghost" size="sm" onClick={onOpenReport} style={{ color: t.bodyText }} title="Relatório">
               <FileDown className="h-4 w-4" />
+            </Button>
+            <Button variant="ghost" size="sm" onClick={onExportCSV} style={{ color: t.bodyText }} title="Exportar CSV">
+              <Download className="h-4 w-4" />
             </Button>
             <Button variant="ghost" size="sm" onClick={() => navigate('/competitors')} style={{ color: t.bodyText }} title="Comparativo">
               <Users className="h-4 w-4" />

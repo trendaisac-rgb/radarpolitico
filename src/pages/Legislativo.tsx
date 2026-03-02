@@ -9,6 +9,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
+import { Sidebar } from '@/components/Sidebar'
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue
 } from '@/components/ui/select'
@@ -100,8 +101,10 @@ export default function Legislativo() {
   }
 
   return (
-    <div className="min-h-screen p-4" style={{ background: t.bgGradient }}>
-      <div className="container max-w-6xl mx-auto">
+    <div className="flex">
+      <Sidebar />
+      <div className="flex-1 md:pl-16 min-h-screen p-4" style={{ background: t.bgGradient }}>
+        <div className="container max-w-6xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
@@ -272,6 +275,7 @@ export default function Legislativo() {
               </Card>
             ))}
           </div>
+        </div>
         </div>
       </div>
     </div>

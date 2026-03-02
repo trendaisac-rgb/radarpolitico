@@ -8,6 +8,7 @@ import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Sidebar } from '@/components/Sidebar'
 import {
   Code2, Copy, Check, ChevronRight, ArrowLeft, Key, Eye, EyeOff,
   Terminal, Globe, Lock, Zap
@@ -731,15 +732,17 @@ export default function ApiDocs() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ backgroundColor: 'hsl(0, 0%, 8%)' }}>
-      {/* Header */}
-      <div
-        className="border-b"
-        style={{
-          backgroundColor: 'hsl(0, 0%, 10%)',
-          borderColor: 'hsl(0, 0%, 20%)'
-        }}
-      >
+    <div className="flex">
+      <Sidebar />
+      <div className="flex-1 md:pl-16 min-h-screen flex flex-col" style={{ backgroundColor: 'hsl(0, 0%, 8%)' }}>
+        {/* Header */}
+        <div
+          className="border-b"
+          style={{
+            backgroundColor: 'hsl(0, 0%, 10%)',
+            borderColor: 'hsl(0, 0%, 20%)'
+          }}
+        >
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Button
@@ -1196,6 +1199,7 @@ curl -X GET https://api.radarpolitico.com.br/v1/politicians \\
               </div>
             </div>
           </div>
+        </div>
         </div>
       </div>
     </div>

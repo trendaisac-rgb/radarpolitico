@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Switch } from '@/components/ui/switch'
+import { Sidebar } from '@/components/Sidebar'
 import {
   Select,
   SelectContent,
@@ -1148,7 +1149,7 @@ export default function Settings() {
 
   // Theme
   const [themeKey, setThemeKey] = useState<ThemeKey>(() => {
-    return (localStorage.getItem('settings-theme') as ThemeKey) || 'azul'
+    return (localStorage.getItem('dashboard-theme') as ThemeKey) || 'azul'
   })
   const theme = THEMES[themeKey]
 
@@ -1272,11 +1273,13 @@ export default function Settings() {
   }
 
   return (
-    <div
-      className="min-h-screen p-4"
-      style={{ background: theme.bgGradient }}
-    >
-      <div className="container max-w-4xl mx-auto">
+    <div className="flex">
+      <Sidebar />
+      <div
+        className="flex-1 md:pl-16 min-h-screen p-4"
+        style={{ background: theme.bgGradient }}
+      >
+        <div className="container max-w-4xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
@@ -1305,7 +1308,7 @@ export default function Settings() {
               {(Object.keys(THEMES) as ThemeKey[]).map(key => (
                 <button
                   key={key}
-                  onClick={() => localStorage.setItem('settings-theme', key) || setThemeKey(key)}
+                  onClick={() => localStorage.setItem('dashboard-theme', key) || setThemeKey(key)}
                   className={`w-6 h-6 rounded-full transition-all ${THEMES[key].dot} ${
                     themeKey === key ? 'ring-2 ring-white ring-offset-2' : 'hover:scale-110'
                   }`}
@@ -1395,6 +1398,7 @@ export default function Settings() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      </div>
     </div>
   )
 }

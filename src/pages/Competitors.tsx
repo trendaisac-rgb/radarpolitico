@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Sidebar } from '@/components/Sidebar'
 import {
   Dialog,
   DialogContent,
@@ -422,9 +423,11 @@ export default function Competitors() {
   // ============================================
 
   return (
-    <div className="min-h-screen" style={{ background: t.bgGradient, color: t.brightText }}>
-      {/* Header */}
-      <header className="border-b sticky top-0 z-50" style={{ borderColor: t.headerBorder, backgroundColor: t.headerBg }}>
+    <div className="flex">
+      <Sidebar />
+      <div className="flex-1 md:pl-16 min-h-screen" style={{ background: t.bgGradient, color: t.brightText }}>
+        {/* Header */}
+        <header className="border-b sticky top-0 z-50" style={{ borderColor: t.headerBorder, backgroundColor: t.headerBg }}>
         <div className="container mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <span className="text-xl">⚔️</span>
@@ -819,6 +822,7 @@ export default function Competitors() {
           Análise Comparativa • Premium Feature • Dados em tempo real
         </footer>
       </main>
+      </div>
     </div>
   )
 }

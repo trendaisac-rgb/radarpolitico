@@ -8,6 +8,7 @@ import { useNavigate } from 'react-router-dom'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Sidebar } from '@/components/Sidebar'
 import {
   ArrowLeft, Loader2, Users, BarChart3, MapPin,
   TrendingUp, Calendar, Briefcase
@@ -94,8 +95,10 @@ export default function Demographics() {
   }
 
   return (
-    <div className="min-h-screen p-4" style={{ background: t.bgGradient }}>
-      <div className="container max-w-6xl mx-auto">
+    <div className="flex">
+      <Sidebar />
+      <div className="flex-1 md:pl-16 min-h-screen p-4" style={{ background: t.bgGradient }}>
+        <div className="container max-w-6xl mx-auto">
         {/* Header */}
         <div className="flex items-center gap-4 mb-8">
           <Button variant="ghost" onClick={() => navigate('/dashboard')} style={{ color: t.bodyText }}>
@@ -275,6 +278,7 @@ export default function Demographics() {
             </div>
           </CardContent>
         </Card>
+        </div>
       </div>
     </div>
   )

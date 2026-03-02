@@ -18,6 +18,7 @@ import HateSpeech from "./pages/HateSpeech";
 import Onboarding from "./pages/Onboarding";
 import ApiDocs from "./pages/ApiDocs";
 import NotFound from "./pages/NotFound";
+import { GlobalSearch } from "./components/GlobalSearch";
 
 const queryClient = new QueryClient();
 
@@ -26,6 +27,7 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
+      <GlobalSearch />
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
